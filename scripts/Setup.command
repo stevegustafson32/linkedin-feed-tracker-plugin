@@ -18,7 +18,7 @@ DATA_DIR="$SCRIPT_DIR/data"
 
 # ── Step 1: Node.js 20 ──────────────────────────────────────
 
-echo "  [1/5] Checking Node.js..."
+echo "  [1/6] Checking Node.js..."
 
 # Load nvm if installed
 export NVM_DIR="$HOME/.nvm"
@@ -70,7 +70,7 @@ fi
 # ── Step 2: Install dependencies ─────────────────────────────
 
 echo ""
-echo "  [2/5] Installing dependencies..."
+echo "  [2/6] Installing dependencies..."
 
 cd "$SCRIPT_DIR"
 npm install --loglevel=error 2>&1 | grep -v "^npm notice"
@@ -88,7 +88,7 @@ fi
 # ── Step 3: Initialize database ──────────────────────────────
 
 echo ""
-echo "  [3/5] Setting up database..."
+echo "  [3/6] Setting up database..."
 
 mkdir -p "$DATA_DIR"
 
@@ -107,7 +107,7 @@ fi
 # ── Step 4: LinkedIn login ───────────────────────────────────
 
 echo ""
-echo "  [4/5] LinkedIn authentication"
+echo "  [4/6] LinkedIn authentication"
 echo ""
 echo "  ┌─────────────────────────────────────────────────────┐"
 echo "  │  A browser window is about to open.                 │"
@@ -153,10 +153,72 @@ if [ $? -ne 0 ]; then
   echo ""
 fi
 
-# ── Step 5: First collection ─────────────────────────────────
+# ── Step 5: Schedule nightly collection ──────────────────────
 
 echo ""
-echo "  [5/5] Running first collection..."
+echo "  [5/6] Setting up nightly scraping..."
+
+# Make the nightly script executable
+chmod +x "$SCRIPT_DIR/NightlyCollect.command"
+
+# Get the full path to node (nvm path)
+NODE_PATH=$(which node)
+
+# Create launchd plist for nightly collection at 10:00 PM
+PLIST_PATH="$HOME/Library/LaunchAgents/com.linkedin-feed-tracker.nightly.plist"
+PLIST_DIR="$HOME/Library/LaunchAgents"
+mkdir -p "$PLIST_DIR"
+
+cat > "$PLIST_PATH" << PLIST_EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.linkedin-feed-tracker.nightly</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>${SCRIPT_DIR}/NightlyCollect.command</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>22</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>${DATA_DIR}/nightly.log</string>
+    <key>StandardErrorPath</key>
+    <string>${DATA_DIR}/nightly-error.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:$(dirname "$NODE_PATH")</string>
+        <key>NVM_DIR</key>
+        <string>${HOME}/.nvm</string>
+    </dict>
+</dict>
+</plist>
+PLIST_EOF
+
+# Load the schedule (unload first if already exists)
+launchctl unload "$PLIST_PATH" 2>/dev/null
+launchctl load "$PLIST_PATH" 2>/dev/null
+
+if [ $? -eq 0 ]; then
+  echo "         ✓ Nightly scraping scheduled (10:00 PM every night)"
+  echo "         Your Mac just needs to be awake — no apps need to be open."
+else
+  echo "         ⚠️  Could not set up automatic scheduling."
+  echo "         You can still double-click NightlyCollect.command manually."
+fi
+
+# ── Step 6: First collection ─────────────────────────────────
+
+echo ""
+echo "  [6/6] Running first collection..."
 echo "         This takes 1-2 minutes."
 echo ""
 
@@ -194,14 +256,14 @@ echo "  ╔═══════════════════════
 echo "  ║  ✅  Setup complete!                              ║"
 echo "  ╠═══════════════════════════════════════════════════╣"
 echo "  ║                                                   ║"
+echo "  ║  Your feed will be scraped every night at 10 PM.  ║"
+echo "  ║  Just keep your Mac awake — nothing else needed.  ║"
+echo "  ║                                                   ║"
 echo "  ║  Go back to Cowork and try:                       ║"
 echo "  ║                                                   ║"
 echo "  ║    \"What's trending on my feed?\"                  ║"
 echo "  ║    \"Show me my dashboard\"                         ║"
 echo "  ║    \"Generate my weekly report\"                    ║"
-echo "  ║                                                   ║"
-echo "  ║  Your feed will be scraped every night at 10 PM.  ║"
-echo "  ║  Just keep your Mac awake.                        ║"
 echo "  ║                                                   ║"
 echo "  ╚═══════════════════════════════════════════════════╝"
 echo ""
