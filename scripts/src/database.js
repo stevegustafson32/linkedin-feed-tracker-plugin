@@ -280,26 +280,36 @@ db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_own_posts_hash ON own_posts(content_hash) WHERE content_hash IS NOT NULL;
 `);
 
-const upsertOwnPost = db.prepare(`
-  INSERT INTO own_posts
+const insertOwnPost = db.prepare(`
+  INSERT OR IGNORE INTO own_posts
     (post_url, content_short, posted_at, posted_at_raw, collected_at,
      likes, comments, reposts, impressions, post_type, content_hash, is_baseline)
   VALUES
     (@post_url, @content_short, @posted_at, @posted_at_raw, @collected_at,
      @likes, @comments, @reposts, @impressions, @post_type, @content_hash, @is_baseline)
-  ON CONFLICT(post_url) DO UPDATE SET
-    likes        = excluded.likes,
-    comments     = excluded.comments,
-    reposts      = excluded.reposts,
-    impressions  = excluded.impressions,
-    collected_at = excluded.collected_at
+`);
+
+const updateOwnPost = db.prepare(`
+  UPDATE own_posts SET
+    post_url     = COALESCE(@post_url, post_url),
+    likes        = @likes,
+    comments     = @comments,
+    reposts      = @reposts,
+    impressions  = @impressions,
+    collected_at = @collected_at
+  WHERE content_hash = @content_hash
 `);
 
 const upsertManyOwnPosts = db.transaction((posts) => {
   let upserted = 0;
   for (const post of posts) {
-    const result = upsertOwnPost.run(post);
-    if (result.changes > 0) upserted++;
+    const inserted = insertOwnPost.run(post);
+    if (inserted.changes > 0) {
+      upserted++;
+    } else {
+      const updated = updateOwnPost.run(post);
+      if (updated.changes > 0) upserted++;
+    }
   }
   return upserted;
 });
