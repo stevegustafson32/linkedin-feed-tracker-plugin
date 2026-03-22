@@ -113,9 +113,8 @@ echo "  ┌───────────────────────
 echo "  │  A browser window is about to open.                 │"
 echo "  │                                                     │"
 echo "  │  Log into LinkedIn like you normally would.         │"
-echo "  │  Once you see your feed, CLOSE the browser.         │"
-echo "  │                                                     │"
-echo "  │  That's it — I'll save the session for future use.  │"
+echo "  │  The browser will close automatically once          │"
+echo "  │  you're logged in. Just sit tight after logging in. │"
 echo "  └─────────────────────────────────────────────────────┘"
 echo ""
 read -p "  Press Enter to open LinkedIn..."
@@ -134,11 +133,36 @@ const PROFILE_DIR = path.join('$DATA_DIR', 'browser-profile');
   });
   const page = context.pages()[0] || await context.newPage();
   await page.goto('https://www.linkedin.com/login');
-  console.log('  Waiting for you to log in and close the browser...');
-  await new Promise((resolve) => {
-    context.on('close', resolve);
+  console.log('  Waiting for you to log in...');
+
+  const loginDetected = await new Promise((resolve) => {
+    let closed = false;
+    context.on('close', () => { closed = true; resolve(true); });
+
+    const check = setInterval(async () => {
+      if (closed) { clearInterval(check); return; }
+      try {
+        const url = page.url();
+        if (url.includes('/feed') || url.includes('/mynetwork') || url.includes('/messaging')) {
+          clearInterval(check);
+          await new Promise(r => setTimeout(r, 3000));
+          console.log('');
+          console.log('         ✓ Login detected — saving session...');
+          if (!closed) await context.close();
+          resolve(true);
+        }
+      } catch { /* page may have navigated */ }
+    }, 2000);
+
+    setTimeout(() => {
+      clearInterval(check);
+      if (!closed) {
+        console.log('');
+        console.log('         Timeout — close the browser manually when ready.');
+      }
+    }, 300000);
   });
-  console.log('');
+
   console.log('         ✓ LinkedIn session saved');
 })().catch(err => {
   console.error('  Error:', err.message);
@@ -232,7 +256,7 @@ echo ""
 
 # Sync connections
 echo "         Syncing your connections..."
-node src/connections.js 2>&1 | grep -E "✅|⚠️|📊|Found|Synced|connections|Total"
+node src/connections.js 2>&1 | grep -E "✅|⚠️|❌|📊|Found|Synced|Extracted|connections|Total|strategy|Diagnostic"
 
 echo ""
 

@@ -1,0 +1,82 @@
+{
+  "_version": 2,
+  "_updated_at": "2026-03-22T00:00:00.000Z",
+  "_updated_by": "manual-update",
+  "_notes": "This file is auto-managed. Claude reads and rewrites it when LinkedIn changes their DOM. Scrapers load these at runtime. DO NOT EDIT MANUALLY.",
+
+  "connections": {
+    "strategies": [
+      {
+        "name": "primary: li items with a[href*=/in/] containing span/div text",
+        "linkSelector": "a[href*=\"/in/\"]",
+        "linkFilter": "hasChild:span",
+        "nameSelector": "span:first-of-type",
+        "headlineSelector": "span:nth-of-type(2)"
+      },
+      {
+        "name": "fallback-1: a[href*=/in/] with <p> children",
+        "linkSelector": "a[href*=\"/in/\"]",
+        "linkFilter": "hasChild:p",
+        "nameSelector": "p:nth-of-type(1)",
+        "headlineSelector": "p:nth-of-type(2)"
+      },
+      {
+        "name": "fallback-2: any a[href*=/in/] with meaningful text",
+        "linkSelector": "a[href*=\"/in/\"]",
+        "linkFilter": "hasText",
+        "nameSelector": "auto",
+        "headlineSelector": "auto"
+      }
+    ],
+    "loadMoreButton": "button",
+    "totalCountPattern": "([\\d,]+)\\s+connections?"
+  },
+
+  "profile": {
+    "postContainers": [
+      ".feed-shared-update-v2",
+      "[data-urn*=\"activity\"]",
+      ".profile-creator-shared-feed-update__container",
+      ".occludable-update",
+      "[data-urn*=\"ugcPost\"]",
+      "[data-urn*=\"share\"]"
+    ],
+    "postText": [
+      ".feed-shared-text",
+      ".break-words",
+      ".update-components-text",
+      "[dir=\"ltr\"]",
+      ".feed-shared-inline-show-more-text"
+    ],
+    "engagement": [
+      ".social-details-social-counts",
+      ".social-details-social-activity",
+      "[class*=\"social-details\"]"
+    ],
+    "repostIndicator": [
+      ".feed-shared-header__text",
+      ".update-components-header",
+      "[class*=\"repost\"]"
+    ],
+    "timeElement": "time",
+    "timeAttrName": "datetime",
+    "fallbackTextBlocks": [
+      "[dir=\"ltr\"]",
+      ".break-words",
+      ".feed-shared-inline-show-more-text"
+    ]
+  },
+
+  "feed": {
+    "sortButton": "button:contains('Top','Sort')",
+    "recentOption": "[role=\"option\"]:contains('Recent'), li:contains('Recent'), button:contains('Recent')",
+    "loadMoreButton": "button:contains('load more','show more results')",
+    "timePattern": "^(\\d+[smhdw]|[1-9]\\d*\\s*(hour|day|week|month|min|second)s?)(\\s*•)?$",
+    "skipPatterns": [
+      "^(following|connect|message|like|comment|repost|send|•|\\d+)$",
+      "^(home|my network|jobs|messaging|notifications|search)$",
+      "^(like|comment|repost|send|follow|unfollow|see more|see less|load more|show more)$"
+    ],
+    "engagementPattern": "\\d+[\\s,]*(reaction|like|comment|repost)"
+  }
+}
