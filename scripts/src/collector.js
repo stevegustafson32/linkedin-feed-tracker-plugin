@@ -10,8 +10,7 @@ const { chromium } = require('playwright');
 const path         = require('path');
 const fs           = require('fs');
 const { getConfig, setConfig, insertMany, makeContentHash, logRun } = require('./database');
-
-const PROFILE_DIR  = path.join(__dirname, '..', 'data', 'browser-profile');
+const { PROFILE_DIR } = require('./paths');
 const FEED_URL     = 'https://www.linkedin.com/feed/?filter=following';
 const FEED_FALLBACK = 'https://www.linkedin.com/feed/';
 

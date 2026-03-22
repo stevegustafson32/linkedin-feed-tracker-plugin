@@ -34,8 +34,7 @@
 
 const fs   = require('fs');
 const path = require('path');
-
-const DATA_DIR         = path.join(__dirname, '..', 'data');
+const { DATA_DIR } = require('./paths');
 const SELECTORS_FILE   = path.join(DATA_DIR, 'selectors.json');
 const DIAGNOSTIC_FILE  = path.join(DATA_DIR, 'diagnostic.json');
 const NEEDS_REPAIR     = path.join(DATA_DIR, 'needs-repair.json');

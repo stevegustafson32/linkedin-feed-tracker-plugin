@@ -19,8 +19,7 @@ const { chromium }             = require('playwright');
 const path                     = require('path');
 const { upsertManyConnections, getConnectionStats, getConfig } = require('./database');
 const { loadSelectors, dumpDiagnostic, flagForRepair, clearRepairFlag } = require('./self-heal');
-
-const PROFILE_DIR  = path.join(__dirname, '..', 'data', 'browser-profile');
+const { PROFILE_DIR } = require('./paths');
 const CONNECTIONS_URL = 'https://www.linkedin.com/mynetwork/invite-connect/connections/';
 
 const DRY_RUN    = process.argv.includes('--count');

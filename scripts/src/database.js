@@ -1,18 +1,16 @@
 /**
  * database.js — SQLite wrapper
- * All data lives in ./data/feeds.db (created automatically).
- * One database per machine; user identity is stored in the config table.
+ *
+ * Data directory is resolved by paths.js (user's project folder).
+ * The user picks a folder during setup → all data lives there →
+ * Cowork can access it because it's in the user's workspace.
  */
 
 const Database = require('better-sqlite3');
 const path     = require('path');
 const fs       = require('fs');
 const crypto   = require('crypto');
-
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const DB_PATH  = path.join(DATA_DIR, 'feeds.db');
-
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+const { DATA_DIR, DB_PATH } = require('./paths');
 
 const db = new Database(DB_PATH);
 

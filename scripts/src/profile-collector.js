@@ -30,8 +30,7 @@ const {
   insertMany, makeContentHash, getConnectionStats,
 } = require('./database');
 const { loadSelectors, dumpDiagnostic, flagForRepair, clearRepairFlag } = require('./self-heal');
-
-const PROFILE_DIR = path.join(__dirname, '..', 'data', 'browser-profile');
+const { PROFILE_DIR } = require('./paths');
 
 // Load profile selectors from config (Claude can rewrite these)
 const selCfg = loadSelectors('profile');
