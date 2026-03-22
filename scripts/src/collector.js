@@ -298,7 +298,8 @@ async function collect({ verbose = false, dryRun = false } = {}) {
 
     for (let attempt = 0; attempt < MAX_LOAD_MORE; attempt++) {
       // Scroll down humanly
-      await page.evaluate(() => window.scrollBy(0, rand(600, 900)));
+      const scrollPx = rand(600, 900);
+      await page.evaluate((px) => window.scrollBy(0, px), scrollPx);
       await sleep(rand(800, 1400));
 
       // Try to click "Load more" / "Show more" button

@@ -257,6 +257,79 @@ const logProfileRun = (data) =>
       (@ran_at, @batch_group, @profiles_total, @profiles_done, @posts_new, @duration_ms, @status, @notes)
   `).run(data);
 
+// ── Phase 5: Own-post performance tracking ──────────────────────────────────
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS own_posts (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_url         TEXT UNIQUE,               -- permalink to the post
+    content_short    TEXT,                       -- first 200 chars
+    posted_at        TEXT,                       -- when user posted it (ISO or relative-parsed)
+    posted_at_raw    TEXT,                       -- raw relative text from LinkedIn ("2d", "1w")
+    collected_at     TEXT NOT NULL,              -- when we scraped this data
+    likes            INTEGER DEFAULT 0,
+    comments         INTEGER DEFAULT 0,
+    reposts          INTEGER DEFAULT 0,
+    impressions      INTEGER DEFAULT 0,          -- if available (usually not for free accounts)
+    post_type        TEXT,                       -- text | image | video | article | poll | carousel
+    content_hash     TEXT,
+    is_baseline      INTEGER DEFAULT 0           -- 1 if this was part of the initial baseline seed
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_own_posts_date ON own_posts(posted_at);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_own_posts_hash ON own_posts(content_hash) WHERE content_hash IS NOT NULL;
+`);
+
+const upsertOwnPost = db.prepare(`
+  INSERT INTO own_posts
+    (post_url, content_short, posted_at, posted_at_raw, collected_at,
+     likes, comments, reposts, impressions, post_type, content_hash, is_baseline)
+  VALUES
+    (@post_url, @content_short, @posted_at, @posted_at_raw, @collected_at,
+     @likes, @comments, @reposts, @impressions, @post_type, @content_hash, @is_baseline)
+  ON CONFLICT(post_url) DO UPDATE SET
+    likes        = excluded.likes,
+    comments     = excluded.comments,
+    reposts      = excluded.reposts,
+    impressions  = excluded.impressions,
+    collected_at = excluded.collected_at
+`);
+
+const upsertManyOwnPosts = db.transaction((posts) => {
+  let upserted = 0;
+  for (const post of posts) {
+    const result = upsertOwnPost.run(post);
+    if (result.changes > 0) upserted++;
+  }
+  return upserted;
+});
+
+const getOwnPosts = (days = 90) => {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return db.prepare(`
+    SELECT * FROM own_posts
+    WHERE posted_at >= ? OR posted_at IS NULL
+    ORDER BY posted_at DESC
+  `).all(cutoff.toISOString());
+};
+
+const getOwnPostStats = () =>
+  db.prepare(`
+    SELECT
+      COUNT(*)                                    AS total_posts,
+      AVG(likes)                                  AS avg_likes,
+      AVG(comments)                               AS avg_comments,
+      AVG(reposts)                                AS avg_reposts,
+      MAX(likes)                                  AS best_likes,
+      MAX(comments)                               AS best_comments,
+      SUM(CASE WHEN is_baseline = 1 THEN 1 ELSE 0 END) AS baseline_posts,
+      SUM(CASE WHEN is_baseline = 0 THEN 1 ELSE 0 END) AS tracked_posts,
+      MIN(posted_at)                              AS earliest,
+      MAX(posted_at)                              AS latest
+    FROM own_posts
+  `).get();
+
 module.exports = {
   db, getConfig, setConfig, makeContentHash,
   insertMany, getPostsSince, getPostsInRange, getRecentDates, getTopAuthors,
@@ -266,4 +339,6 @@ module.exports = {
   // Phase 4
   upsertManyConnections, getConnectionBatch, markConnectionScraped,
   getConnectionStats, logProfileRun,
+  // Phase 5
+  upsertManyOwnPosts, getOwnPosts, getOwnPostStats,
 };
