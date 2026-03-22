@@ -1,0 +1,23 @@
+{
+  "name": "steve-gustafson-plugins",
+  "description": "Plugins by Steve Gustafson — LinkedIn intelligence, content strategy, and more.",
+  "owner": {
+    "name": "Steve Gustafson",
+    "email": "stevegustafson@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "linkedin-feed-tracker",
+      "source": "./",
+      "description": "Track what your LinkedIn network posts about, surface trends, and draft content — powered by nightly Playwright scraping and Claude intelligence.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Steve Gustafson"
+      },
+      "homepage": "https://stevegustafson32.github.io/cowork-guide/linkedin-feed-tracker.html",
+      "category": "productivity",
+      "tags": ["linkedin", "social-media", "content-strategy", "networking", "cowork"],
+      "keywords": ["linkedin", "social-media", "content-strategy", "networking", "feed-tracking"]
+    }
+  ]
+}

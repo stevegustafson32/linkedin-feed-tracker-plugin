@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkedIn Feed Tracker — Sample Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; color: #1a1a1a; }
+  .banner { background: #0A66C2; color: white; text-align: center; padding: 10px; font-size: 13px; font-weight: 500; letter-spacing: 0.3px; }
+  .banner span { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 3px; margin-left: 6px; font-size: 11px; }
+  .header { background: white; border-bottom: 1px solid #e0e0e0; padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+  .header h1 em { font-style: normal; color: #0A66C2; }
+  .header .meta { font-size: 13px; color: #666; }
+  .filters { background: white; border-bottom: 1px solid #e0e0e0; padding: 12px 32px; display: flex; gap: 12px; align-items: center; }
+  .filters label { font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .filters select { padding: 6px 12px; border: 1px solid #d0d0d0; border-radius: 6px; font-size: 13px; background: white; cursor: pointer; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px 32px; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .stat-card .label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .stat-card .value { font-size: 32px; font-weight: 700; margin: 4px 0; color: #1a1a1a; }
+  .stat-card .change { font-size: 13px; }
+  .stat-card .change.up { color: #057642; }
+  .stat-card .change.down { color: #B24020; }
+  .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .chart-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #333; }
+  .full-width { grid-template-columns: 1fr; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .top-posts { list-style: none; }
+  .top-posts li { padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+  .top-posts li:last-child { border-bottom: none; }
+  .top-posts .author { font-weight: 600; color: #0A66C2; font-size: 14px; }
+  .top-posts .snippet { font-size: 13px; color: #444; margin: 4px 0; line-height: 1.4; }
+  .top-posts .engagement { font-size: 12px; color: #888; }
+  .top-posts .engagement b { color: #333; }
+  .connections-list { list-style: none; }
+  .connections-list li { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+  .connections-list li:last-child { border-bottom: none; }
+  .connections-list .name { font-weight: 600; font-size: 14px; }
+  .connections-list .headline { font-size: 12px; color: #666; }
+  .connections-list .count { font-size: 20px; font-weight: 700; color: #0A66C2; }
+  .gap-card { background: #f0f7ff; border: 1px solid #c8dff5; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .gap-card h4 { font-size: 14px; font-weight: 600; color: #0A66C2; margin-bottom: 4px; }
+  .gap-card p { font-size: 13px; color: #444; line-height: 1.4; }
+  .gap-card .opportunity { font-size: 12px; color: #057642; font-weight: 600; margin-top: 6px; }
+  .health-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .health-item { text-align: center; padding: 12px; background: #f8faf8; border-radius: 8px; border: 1px solid #e0e8e0; }
+  .health-item .status { font-size: 20px; margin-bottom: 4px; }
+  .health-item .hlabel { font-size: 12px; color: #666; font-weight: 500; }
+  .health-item .hvalue { font-size: 14px; font-weight: 600; }
+  canvas { max-height: 280px; }
+</style>
+</head>
+<body>
+
+<div class="banner">SAMPLE DATA — This is a preview of what your dashboard will look like after 2 weeks of collection <span>Not real data</span></div>
+
+<div class="header">
+  <div>
+    <h1><em>LinkedIn</em> Feed Tracker</h1>
+    <div class="meta">March 10 — March 22, 2026 &nbsp;·&nbsp; 1,847 posts collected &nbsp;·&nbsp; 312 connections tracked</div>
+  </div>
+</div>
+
+<div class="filters">
+  <label>Time Range</label>
+  <select id="timeRange">
+    <option value="7">Last 7 days</option>
+    <option value="14" selected>Last 14 days</option>
+    <option value="30">Last 30 days</option>
+  </select>
+  <label style="margin-left:12px">Topic</label>
+  <select id="topicFilter">
+    <option value="all">All Topics</option>
+    <option value="founders">Founders & Startups</option>
+    <option value="ops">Operations & Productivity</option>
+    <option value="sales">Sales & Revenue</option>
+    <option value="culture">Work & Culture</option>
+  </select>
+  <label style="margin-left:12px">Source</label>
+  <select id="sourceFilter">
+    <option value="all">Feed + Profiles</option>
+    <option value="feed">Feed Only</option>
+    <option value="profile">Profiles Only</option>
+  </select>
+</div>
+
+<div class="container">
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label">Posts This Week</div>
+      <div class="value">847</div>
+      <div class="change up">+18% vs. last week</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Unique Authors</div>
+      <div class="value">198</div>
+      <div class="change up">+12 new voices</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Avg. Engagement</div>
+      <div class="value">43</div>
+      <div class="change down">-6% vs. last week</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Top Topic</div>
+      <div class="value" style="font-size:20px;">Founders & Startups</div>
+      <div class="change up">31% of all posts</div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <h3>Daily Post Volume</h3>
+      <canvas id="volumeChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h3>Topic Distribution</h3>
+      <canvas id="topicChart"></canvas>
+    </div>
+  </div>
+
+  <div class="charts-grid full-width">
+    <div class="chart-card">
+      <h3>Engagement Trends (Likes + Comments per Day)</h3>
+      <canvas id="engagementChart"></canvas>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Top Posts This Week</h3>
+      <ul class="top-posts">
+        <li>
+          <div class="author">Sarah Chen</div>
+          <div class="snippet">"We just closed our Series A at $12M. Here's what I wish someone told me about fundraising when I was at $0 ARR..."</div>
+          <div class="engagement"><b>892</b> likes · <b>147</b> comments</div>
+        </li>
+        <li>
+          <div class="author">Marcus Rivera</div>
+          <div class="snippet">"Unpopular opinion: the best sales reps I've hired in 2026 have zero sales experience. Here's why that's not crazy..."</div>
+          <div class="engagement"><b>654</b> likes · <b>203</b> comments</div>
+        </li>
+        <li>
+          <div class="author">Priya Kapoor</div>
+          <div class="snippet">"Our team went from 40-hour weeks to 32-hour weeks. Revenue went UP. Burnout went down. Here's exactly what we changed..."</div>
+          <div class="engagement"><b>1,241</b> likes · <b>89</b> comments</div>
+        </li>
+        <li>
+          <div class="author">David Okonkwo</div>
+          <div class="snippet">"I built an internal AI tool that saves our ops team 6 hours/week. It cost $0 and took one weekend. Thread..."</div>
+          <div class="engagement"><b>547</b> likes · <b>132</b> comments</div>
+        </li>
+        <li>
+          <div class="author">Rachel Torres</div>
+          <div class="snippet">"Rejected by 31 VCs. Just got our first term sheet. The founder journey is not a highlight reel..."</div>
+          <div class="engagement"><b>2,103</b> likes · <b>312</b> comments</div>
+        </li>
+      </ul>
+    </div>
+    <div class="chart-card">
+      <h3>Most Active Connections</h3>
+      <ul class="connections-list">
+        <li><div><div class="name">Sarah Chen</div><div class="headline">CEO @ Lumina AI · Series A</div></div><div class="count">14</div></li>
+        <li><div><div class="name">Marcus Rivera</div><div class="headline">VP Sales @ ScaleUp</div></div><div class="count">11</div></li>
+        <li><div><div class="name">David Okonkwo</div><div class="headline">Head of Ops @ Meridian</div></div><div class="count">9</div></li>
+        <li><div><div class="name">Priya Kapoor</div><div class="headline">Founder @ WorkWell Labs</div></div><div class="count">8</div></li>
+        <li><div><div class="name">Alex Kim</div><div class="headline">Product Lead @ Craft</div></div><div class="count">7</div></li>
+        <li><div><div class="name">Rachel Torres</div><div class="headline">Founder @ GreenPath (pre-seed)</div></div><div class="count">7</div></li>
+        <li><div><div class="name">James Whitfield</div><div class="headline">CRO @ Pipeline.io</div></div><div class="count">6</div></li>
+        <li><div><div class="name">Nina Patel</div><div class="headline">Ops @ Stripe</div></div><div class="count">5</div></li>
+      </ul>
+      <div style="margin-top:16px;font-size:12px;color:#666;">Posts in last 7 days</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="chart-card">
+      <h3>Content Opportunities</h3>
+      <div class="gap-card">
+        <h4>AI in Operations</h4>
+        <p>Your network posted 47 times about AI tools for internal ops this week — up 140% from last week. David Okonkwo's "weekend AI tool" post got 547 likes. You haven't posted about AI ops yet.</p>
+        <div class="opportunity">High opportunity — trending topic, no competition from you</div>
+      </div>
+      <div class="gap-card">
+        <h4>Fundraising Transparency</h4>
+        <p>3 of the top 10 posts this week were founders sharing raw fundraising stories (rejections, pivots, real numbers). Rachel Torres' rejection post hit 2,103 likes.</p>
+        <div class="opportunity">Medium opportunity — aligns with your WuunderFund journey</div>
+      </div>
+      <div class="gap-card">
+        <h4>Shorter Work Weeks</h4>
+        <p>Priya Kapoor's 32-hour week post is the 3rd most-engaged post this week. 4 other connections commented. The "results-over-hours" narrative is gaining traction.</p>
+        <div class="opportunity">Emerging trend — early mover advantage</div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Collection Health</h3>
+      <div class="health-grid">
+        <div class="health-item"><div class="status">&#9989;</div><div class="hlabel">Status</div><div class="hvalue">Healthy</div></div>
+        <div class="health-item"><div class="status">&#9989;</div><div class="hlabel">Last Scrape</div><div class="hvalue">2h ago</div></div>
+        <div class="health-item"><div class="status">&#9989;</div><div class="hlabel">Batches</div><div class="hvalue">7/7 covered</div></div>
+        <div class="health-item"><div class="status">&#9989;</div><div class="hlabel">Session</div><div class="hvalue">Active</div></div>
+        <div class="health-item"><div class="status">&#9989;</div><div class="hlabel">Connections</div><div class="hvalue">312 tracked</div></div>
+        <div class="health-item"><div class="status">&#9989;</div><div class="hlabel">Dedup Rate</div><div class="hvalue">12% overlap</div></div>
+      </div>
+      <div style="margin-top:16px;">
+        <h3 style="font-size:13px;margin-bottom:8px;">7-Day Scrape Log</h3>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;">
+          <tr style="border-bottom:1px solid #eee;color:#666;"><td style="padding:4px 0;">Mon 3/16</td><td>Batch 1</td><td>44 profiles</td><td style="color:#057642;">61 posts</td></tr>
+          <tr style="border-bottom:1px solid #eee;color:#666;"><td style="padding:4px 0;">Tue 3/17</td><td>Batch 2</td><td>45 profiles</td><td style="color:#057642;">58 posts</td></tr>
+          <tr style="border-bottom:1px solid #eee;color:#666;"><td style="padding:4px 0;">Wed 3/18</td><td>Batch 3</td><td>44 profiles</td><td style="color:#057642;">72 posts</td></tr>
+          <tr style="border-bottom:1px solid #eee;color:#666;"><td style="padding:4px 0;">Thu 3/19</td><td>Batch 4</td><td>45 profiles</td><td style="color:#057642;">54 posts</td></tr>
+          <tr style="border-bottom:1px solid #eee;color:#666;"><td style="padding:4px 0;">Fri 3/20</td><td>Batch 5</td><td>45 profiles</td><td style="color:#057642;">67 posts</td></tr>
+          <tr style="border-bottom:1px solid #eee;color:#666;"><td style="padding:4px 0;">Sat 3/21</td><td>Batch 6</td><td>44 profiles</td><td style="color:#057642;">41 posts</td></tr>
+          <tr style="color:#666;"><td style="padding:4px 0;">Sun 3/22</td><td>Batch 0</td><td>45 profiles</td><td style="color:#057642;">53 posts</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Daily post volume
+const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+new Chart(volumeCtx, {
+  type: 'line',
+  data: {
+    labels: ['Mar 8','Mar 9','Mar 10','Mar 11','Mar 12','Mar 13','Mar 14','Mar 15','Mar 16','Mar 17','Mar 18','Mar 19','Mar 20','Mar 21','Mar 22'],
+    datasets: [{
+      label: 'Feed',
+      data: [42, 18, 68, 71, 74, 65, 52, 38, 22, 72, 78, 81, 77, 48, 35],
+      borderColor: '#0A66C2',
+      backgroundColor: 'rgba(10,102,194,0.08)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3
+    },{
+      label: 'Profiles',
+      data: [51, 44, 58, 63, 61, 72, 55, 48, 41, 61, 58, 72, 54, 67, 53],
+      borderColor: '#057642',
+      backgroundColor: 'rgba(5,118,66,0.08)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 3
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 12 } } } },
+    scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+  }
+});
+
+// Topic distribution
+const topicCtx = document.getElementById('topicChart').getContext('2d');
+new Chart(topicCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Founders & Startups', 'Operations & Productivity', 'Sales & Revenue', 'Work & Culture'],
+    datasets: [{
+      data: [31, 27, 22, 20],
+      backgroundColor: ['#0A66C2', '#057642', '#B24020', '#7C3AED'],
+      borderWidth: 2,
+      borderColor: '#fff'
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, padding: 12, font: { size: 12 } } },
+      tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.raw + '%'; } } }
+    }
+  }
+});
+
+// Engagement trends
+const engCtx = document.getElementById('engagementChart').getContext('2d');
+new Chart(engCtx, {
+  type: 'line',
+  data: {
+    labels: ['Mar 8','Mar 9','Mar 10','Mar 11','Mar 12','Mar 13','Mar 14','Mar 15','Mar 16','Mar 17','Mar 18','Mar 19','Mar 20','Mar 21','Mar 22'],
+    datasets: [{
+      label: 'Avg Likes',
+      data: [38, 29, 45, 52, 48, 41, 35, 42, 31, 55, 61, 47, 44, 38, 40],
+      borderColor: '#0A66C2',
+      tension: 0.3,
+      pointRadius: 3
+    },{
+      label: 'Avg Comments',
+      data: [12, 8, 18, 22, 15, 14, 11, 16, 9, 21, 28, 19, 14, 12, 15],
+      borderColor: '#057642',
+      tension: 0.3,
+      pointRadius: 3
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16, font: { size: 12 } } } },
+    scales: { y: { beginAtZero: true, grid: { color: '#f0f0f0' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } }
+  }
+});
+</script>
+</body>
+</html>

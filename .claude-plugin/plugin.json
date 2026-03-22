@@ -1,0 +1,13 @@
+{
+  "name": "linkedin-feed-tracker",
+  "version": "1.0.0",
+  "description": "Track what your LinkedIn network posts about, surface trends, and draft content — powered by nightly Playwright scraping and Claude intelligence.",
+  "author": {
+    "name": "Steve Gustafson",
+    "email": "stevegustafson@gmail.com"
+  },
+  "homepage": "https://stevegustafson32.github.io/cowork-guide/linkedin-feed-tracker.html",
+  "repository": "https://github.com/stevegustafson32/linkedin-feed-tracker-plugin",
+  "license": "MIT",
+  "keywords": ["linkedin", "social-media", "content-strategy", "networking", "feed-tracking", "cowork"]
+}

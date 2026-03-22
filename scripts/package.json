@@ -1,0 +1,31 @@
+{
+  "name": "linkedin-feed-tracker",
+  "version": "1.0.0",
+  "description": "Nightly LinkedIn feed collector — captures posts from people you follow and generates weekly insights.",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "setup":            "node src/setup.js",
+    "start":            "node index.js",
+    "collect":          "node src/collector.js",
+    "test-collect":     "node src/collector.js --dry-run",
+    "report":           "node src/analyzer.js",
+    "draft":            "node src/drafter.js",
+    "health":           "node src/health.js",
+    "sync":             "node src/cowork-sync.js",
+    "dash":             "node src/dashboard.js",
+    "sync-connections": "node src/connections.js",
+    "count-connections":"node src/connections.js --count",
+    "scrape-profiles":  "node src/profile-scraper.js",
+    "scrape-all":       "node src/profile-scraper.js --all",
+    "topics":           "node src/topics.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "chalk":          "^4.1.2",
+    "express":        "^4.18.2",
+    "inquirer":       "^8.2.6",
+    "node-cron":      "^3.0.3",
+    "playwright":     "^1.42.1"
+  }
+}
