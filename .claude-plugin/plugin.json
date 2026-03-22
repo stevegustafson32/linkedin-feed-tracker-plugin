@@ -1,7 +1,7 @@
 {
   "name": "linkedin-feed-tracker",
   "version": "1.0.0",
-  "description": "Track what your LinkedIn network posts about, surface trends, and draft content — powered by nightly Playwright scraping and Claude intelligence.",
+  "description": "Know what your LinkedIn network is talking about. Nightly Playwright scraping, trend analysis, engagement tracking, weekly reports, and self-healing selectors — all local, all private.",
   "author": {
     "name": "Steve Gustafson",
     "email": "stevegustafson@gmail.com"
