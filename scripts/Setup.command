@@ -188,6 +188,8 @@ cat > "$PLIST_PATH" << PLIST_EOF
         <key>Minute</key>
         <integer>0</integer>
     </dict>
+    <key>MisfireGracePeriod</key>
+    <integer>3600</integer>
     <key>StandardOutPath</key>
     <string>${DATA_DIR}/nightly.log</string>
     <key>StandardErrorPath</key>
@@ -209,7 +211,7 @@ launchctl load "$PLIST_PATH" 2>/dev/null
 
 if [ $? -eq 0 ]; then
   echo "         ✓ Nightly scraping scheduled (10:00 PM every night)"
-  echo "         Your Mac just needs to be awake — no apps need to be open."
+  echo "         Runs automatically. If your Mac is asleep, it catches up when you wake it."
 else
   echo "         ⚠️  Could not set up automatic scheduling."
   echo "         You can still double-click NightlyCollect.command manually."
