@@ -12,13 +12,46 @@ echo "  ║     LinkedIn Feed Tracker — Setup                 ║"
 echo "  ╚═══════════════════════════════════════════════════╝"
 echo ""
 
-# Find the scripts directory (same folder as this .command file)
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# ── Step 0: Clone the repo if running from a standalone download ──
+
+INSTALL_DIR="$HOME/.linkedin-feed-tracker/scripts"
+
+# Check if we're already inside the cloned repo (has package.json nearby)
+LAUNCH_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$LAUNCH_DIR/package.json" ] && [ -f "$LAUNCH_DIR/src/database.js" ]; then
+  # Running from inside the repo — use this directory
+  SCRIPT_DIR="$LAUNCH_DIR"
+else
+  # Running from Downloads or standalone — clone the repo
+  echo "  [0/7] Downloading LinkedIn Feed Tracker..."
+  if [ -d "$INSTALL_DIR/.git" ]; then
+    echo "         Found existing install — pulling latest..."
+    cd "$INSTALL_DIR" && git pull --ff-only 2>/dev/null
+  else
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    git clone https://github.com/stevegustafson32/linkedin-feed-tracker-plugin.git "$HOME/.linkedin-feed-tracker/repo-temp" 2>&1 | tail -1
+    if [ $? -ne 0 ]; then
+      echo ""
+      echo "  ❌  Could not download LinkedIn Feed Tracker."
+      echo "      Check your internet connection and try again."
+      echo ""
+      read -p "  Press Enter to close..."
+      exit 1
+    fi
+    # Move scripts dir to the right place
+    mv "$HOME/.linkedin-feed-tracker/repo-temp/scripts" "$INSTALL_DIR"
+    rm -rf "$HOME/.linkedin-feed-tracker/repo-temp"
+  fi
+  SCRIPT_DIR="$INSTALL_DIR"
+  echo "         ✓ Downloaded to $SCRIPT_DIR"
+  echo ""
+fi
+
 DATA_DIR="$SCRIPT_DIR/data"
 
 # ── Step 1: Node.js 20 ──────────────────────────────────────
 
-echo "  [1/6] Checking Node.js..."
+echo "  [1/7] Checking Node.js..."
 
 # Load nvm if installed
 export NVM_DIR="$HOME/.nvm"
@@ -67,10 +100,39 @@ else
   fi
 fi
 
-# ── Step 2: Install dependencies ─────────────────────────────
+# ── Step 2: Pick your project folder ─────────────────────────
 
 echo ""
-echo "  [2/6] Installing dependencies..."
+echo "  [2/7] Choose where to store your data..."
+echo ""
+echo "  Your database and browser session will live in this folder."
+echo "  Pick a folder accessible to Cowork (e.g., inside your Cowork workspace)."
+echo ""
+
+# Use macOS folder picker
+PROJECT_FOLDER=$(osascript -e 'tell application "System Events" to activate' -e 'set theFolder to choose folder with prompt "Pick a folder for LinkedIn Feed Tracker data (e.g., your Cowork workspace):"' -e 'return POSIX path of theFolder' 2>/dev/null)
+
+if [ -z "$PROJECT_FOLDER" ] || [ "$PROJECT_FOLDER" = "" ]; then
+  echo "         No folder selected — using default: ~/.linkedin-feed-tracker/data/"
+  PROJECT_FOLDER="$HOME/.linkedin-feed-tracker/data"
+  mkdir -p "$PROJECT_FOLDER"
+else
+  # Create a LinkedIn Feed Tracker subfolder inside chosen folder
+  PROJECT_FOLDER="${PROJECT_FOLDER%/}/LinkedIn Feed Tracker"
+  mkdir -p "$PROJECT_FOLDER"
+fi
+
+echo "         ✓ Data folder: $PROJECT_FOLDER"
+
+# Write data-dir.txt so scripts can find the DB
+mkdir -p "$HOME/.linkedin-feed-tracker"
+echo "$PROJECT_FOLDER" > "$HOME/.linkedin-feed-tracker/data-dir.txt"
+DATA_DIR="$PROJECT_FOLDER"
+
+# ── Step 3: Install dependencies ─────────────────────────────
+
+echo ""
+echo "  [3/7] Installing dependencies..."
 
 cd "$SCRIPT_DIR"
 npm install --loglevel=error 2>&1 | grep -v "^npm notice"
@@ -85,10 +147,10 @@ else
   exit 1
 fi
 
-# ── Step 3: Initialize database ──────────────────────────────
+# ── Step 4: Initialize database ──────────────────────────────
 
 echo ""
-echo "  [3/6] Setting up database..."
+echo "  [4/7] Setting up database..."
 
 mkdir -p "$DATA_DIR"
 
@@ -107,7 +169,7 @@ fi
 # ── Step 4: LinkedIn login ───────────────────────────────────
 
 echo ""
-echo "  [4/6] LinkedIn authentication"
+echo "  [5/7] LinkedIn authentication"
 echo ""
 echo "  ┌─────────────────────────────────────────────────────┐"
 echo "  │  A browser window is about to open.                 │"
@@ -180,7 +242,7 @@ fi
 # ── Step 5: Schedule nightly collection ──────────────────────
 
 echo ""
-echo "  [5/6] Setting up nightly scraping..."
+echo "  [6/7] Setting up nightly scraping..."
 
 # Make the nightly script executable
 chmod +x "$SCRIPT_DIR/NightlyCollect.command"
@@ -244,7 +306,7 @@ fi
 # ── Step 6: First collection ─────────────────────────────────
 
 echo ""
-echo "  [6/6] Running first collection..."
+echo "  [7/7] Running first collection..."
 echo "         This takes 1-2 minutes."
 echo ""
 
