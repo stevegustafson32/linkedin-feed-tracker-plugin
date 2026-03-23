@@ -25,6 +25,15 @@ echo "" >> "$LOG"
 echo "═══════════════════════════════════════════════════" >> "$LOG"
 echo "[$(date)] Nightly collection starting" >> "$LOG"
 
+# Part 0: Auto-update from GitHub (silent, non-blocking)
+if [ -d "$SCRIPT_DIR/../.git" ]; then
+  echo "[$(date)] Checking for updates..." >> "$LOG"
+  cd "$SCRIPT_DIR/.."
+  git pull --ff-only >> "$LOG" 2>&1 || echo "[$(date)] Update check skipped (no internet or merge conflict)" >> "$LOG"
+  cd "$SCRIPT_DIR"
+  npm install --loglevel=error >> "$LOG" 2>&1
+fi
+
 # Part 1: Feed collection
 echo "[$(date)] Feed collection..." >> "$LOG"
 node src/collector.js >> "$LOG" 2>&1
