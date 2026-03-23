@@ -59,18 +59,61 @@ function parseFeedText(rawText, collectedAt) {
       continue; // post too old, but keep scanning (older posts may appear between newer ones)
     }
 
-    // Look back up to 5 lines for author name and title
-    let authorName  = null;
-    let authorTitle = null;
-    for (let back = 1; back <= 5; back++) {
+    // Look back up to 6 lines for author name and title
+    // LinkedIn text order (going backward from timestamp):
+    //   [Name] → [Headline] → [Degree: "• 1st"] → [Timestamp]
+    // The first non-skip candidate is usually the headline, second is the name.
+    let candidates = [];
+    for (let back = 1; back <= 6; back++) {
       const candidate = lines[i - back];
       if (!candidate) break;
-      // Skip "Following", "Connect", "Message", "•", reaction counts
+      // Skip "Following", "Connect", "Message", standalone bullets, reaction counts
       if (/^(following|connect|message|like|comment|repost|send|•|\d+)$/i.test(candidate)) continue;
-      // Skip lines that look like nav or UI chrome
+      // Skip connection degree lines: "• 1st", "• 2nd", "• 3rd+", "• Following"
+      if (/^•\s*(1st|2nd|3rd\+?|following)/i.test(candidate)) continue;
+      // Skip nav/UI chrome
       if (/^(home|my network|jobs|messaging|notifications|search)$/i.test(candidate)) continue;
-      if (!authorName) { authorName = candidate; }
-      else if (!authorTitle) { authorTitle = candidate; break; }
+      // Skip "Promoted" labels
+      if (/^promoted$/i.test(candidate)) continue;
+      candidates.push(candidate);
+      if (candidates.length >= 2) break;
+    }
+
+    // Determine which candidate is the name vs headline
+    // Names: short, 2-4 capitalized words, no pipe/slash/at separators
+    // Headlines: contain "|", "//", " at ", "CEO", "Founder", "Director", etc.
+    function looksLikeName(text) {
+      if (!text) return false;
+      // Has headline indicators → not a name
+      if (/[|\/]{2}|•/.test(text)) return false;
+      if (/\b(at|@)\s+[A-Z]/i.test(text)) return false;
+      if (/\b(CEO|CTO|CFO|COO|CMO|VP|SVP|EVP|Director|Manager|Founder|Co-Founder|President|Partner|Head of|Lead|Engineer|Consultant|Advisor|Executive|Strategist|Entrepreneur|Editor|Writer|Coach|Author)\b/i.test(text)) return false;
+      // Names are typically short: 2-5 words
+      const words = text.trim().split(/\s+/);
+      if (words.length > 6) return false;
+      // Most words should be capitalized
+      const capWords = words.filter(w => /^[A-Z]/.test(w));
+      return capWords.length >= words.length * 0.6;
+    }
+
+    let authorName = null;
+    let authorTitle = null;
+
+    if (candidates.length >= 2) {
+      // Two candidates: figure out which is name vs headline
+      if (looksLikeName(candidates[0]) && !looksLikeName(candidates[1])) {
+        authorName = candidates[0];
+        authorTitle = candidates[1];
+      } else if (looksLikeName(candidates[1]) && !looksLikeName(candidates[0])) {
+        authorName = candidates[1];
+        authorTitle = candidates[0];
+      } else {
+        // Both look like names or both like headlines — further back = name
+        authorName = candidates[1];
+        authorTitle = candidates[0];
+      }
+    } else if (candidates.length === 1) {
+      authorName = candidates[0];
     }
 
     if (!authorName) { i++; continue; }
