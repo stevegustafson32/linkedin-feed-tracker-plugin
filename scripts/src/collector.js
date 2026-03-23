@@ -14,10 +14,10 @@ const { PROFILE_DIR } = require('./paths');
 const FEED_URL     = 'https://www.linkedin.com/feed/?filter=following';
 const FEED_FALLBACK = 'https://www.linkedin.com/feed/';
 
-// How many "Load more" clicks to attempt
-const MAX_LOAD_MORE = parseInt(getConfig('max_load_more', '12'), 10);
-// Stop loading when posts are this many hours old
-const LOOKBACK_HOURS = parseInt(getConfig('lookback_hours', '26'), 10);
+// How many "Load more" clicks to attempt (higher = more posts, longer run)
+const MAX_LOAD_MORE = parseInt(getConfig('max_load_more', '30'), 10);
+// Stop loading when posts are this many hours old (168h = 7 days)
+const LOOKBACK_HOURS = parseInt(getConfig('lookback_hours', '168'), 10);
 
 // ── Timing helpers ─────────────────────────────────────────────────────────────
 
