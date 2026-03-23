@@ -5,7 +5,8 @@
  * connections table for use by the profile-based scraper.
  *
  * Handles up to 5,000 connections via infinite-scroll pagination.
- * Assigns each connection a batch_group (0-6) for 7-day rotation.
+ * Assigns each connection a batch_group using auto-scaling rotation
+ * (7/14/21 batches depending on connection count).
  *
  * Uses the self-heal selector system: if all strategies fail,
  * dumps DOM diagnostic so Claude can auto-fix selectors.json.
@@ -17,7 +18,7 @@
 
 const { chromium }             = require('playwright');
 const path                     = require('path');
-const { upsertManyConnections, getConnectionStats, getConfig } = require('./database');
+const { upsertManyConnections, getConnectionStats, getConfig, computeBatchCount } = require('./database');
 const { loadSelectors, dumpDiagnostic, flagForRepair, clearRepairFlag } = require('./self-heal');
 const { PROFILE_DIR } = require('./paths');
 const CONNECTIONS_URL = 'https://www.linkedin.com/mynetwork/invite-connect/connections/';
@@ -390,7 +391,10 @@ async function scrapeConnections() {
       return { success: true, total: rawConnections.length };
     }
 
-    // ── Normalize URLs and assign batch groups ──────────────────────────────
+    // ── Normalize URLs and assign batch groups (auto-scaling) ─────────────────
+    const batchCount = computeBatchCount(rawConnections.length);
+    console.log(`[connections] Auto-scaling: ${rawConnections.length} connections → ${batchCount} batches (~${Math.ceil(rawConnections.length / batchCount)} profiles/night)`);
+
     const toUpsert = rawConnections.map((c, i) => {
       const href = c.href || '';
       const profileUrl = href.startsWith('http')
@@ -400,7 +404,7 @@ async function scrapeConnections() {
         name: c.name,
         headline: c.headline,
         profile_url: profileUrl,
-        batch_group: i % 7,
+        batch_group: i % batchCount,
       };
     });
 

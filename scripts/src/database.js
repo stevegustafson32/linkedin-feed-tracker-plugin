@@ -251,6 +251,32 @@ const getConnectionStats = () =>
     FROM connections
   `).get();
 
+// ── Auto-scaling batch helpers ────────────────────────────────────────────────
+
+const getActiveConnectionCount = () =>
+  db.prepare(`SELECT COUNT(*) as count FROM connections WHERE is_active = 1`).get().count;
+
+function computeBatchCount(totalConnections) {
+  // Target: ~350-500 profiles per nightly run for safe rate limiting
+  // 7 batches:  ≤3500 connections → ~500/night max → ~45 min
+  // 14 batches: 3501-7000         → ~500/night max → ~45 min
+  // 21 batches: 7001-10500        → ~500/night max → ~45 min
+  if (totalConnections <= 3500) return 7;
+  if (totalConnections <= 7000) return 14;
+  return 21;
+}
+
+const reassignBatchGroups = db.transaction((batchCount) => {
+  const connections = db.prepare(
+    `SELECT id FROM connections WHERE is_active = 1 ORDER BY id`
+  ).all();
+  const update = db.prepare(`UPDATE connections SET batch_group = ? WHERE id = ?`);
+  for (let i = 0; i < connections.length; i++) {
+    update.run(i % batchCount, connections[i].id);
+  }
+  return connections.length;
+});
+
 const logProfileRun = (data) =>
   db.prepare(`
     INSERT INTO profile_scrape_runs
@@ -351,6 +377,7 @@ module.exports = {
   // Phase 4
   upsertManyConnections, getConnectionBatch, markConnectionScraped,
   getConnectionStats, logProfileRun,
+  getActiveConnectionCount, computeBatchCount, reassignBatchGroups,
   // Phase 5
   upsertManyOwnPosts, getOwnPosts, getOwnPostStats,
 };

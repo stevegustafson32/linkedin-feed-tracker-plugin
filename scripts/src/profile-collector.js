@@ -1,9 +1,10 @@
 /**
  * profile-collector.js — Visit connection profiles in daily batches
  *
- * This is the core of the 7-day rotation. Each connection is assigned a
- * batch_group (0-6). Each day we visit ~1/7 of all connections, scrape
- * their recent posts, and store them with content_hash dedup.
+ * This is the core of the auto-scaling rotation. Each connection is assigned a
+ * batch_group based on total connection count (7/14/21 batches). Each day we
+ * visit one batch of connections, scrape their recent posts, and store them
+ * with content_hash dedup.
  *
  * Dedup guarantee:
  *   - Every post gets a content_hash = SHA-256(author_name || content_short)
@@ -28,6 +29,7 @@ const path         = require('path');
 const {
   getConnectionBatch, markConnectionScraped, logProfileRun,
   insertMany, makeContentHash, getConnectionStats,
+  getActiveConnectionCount, computeBatchCount,
 } = require('./database');
 const { loadSelectors, dumpDiagnostic, flagForRepair, clearRepairFlag } = require('./self-heal');
 const { PROFILE_DIR } = require('./paths');
@@ -112,12 +114,12 @@ function isWithin7Days(relativeStr) {
 
 function parseArgs() {
   const args = process.argv.slice(2);
-  let batchGroup = new Date().getDay(); // 0=Sun, 1=Mon, ... 6=Sat
   let limit = 0; // 0 = no limit
+  let manualBatch = null;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--batch' && args[i + 1]) {
-      batchGroup = parseInt(args[i + 1], 10);
+      manualBatch = parseInt(args[i + 1], 10);
       i++;
     }
     if (args[i] === '--limit' && args[i + 1]) {
@@ -126,7 +128,19 @@ function parseArgs() {
     }
   }
 
-  return { batchGroup, limit };
+  // Auto-scaling: detect connection count and compute batch count
+  const totalConnections = getActiveConnectionCount();
+  const batchCount = computeBatchCount(totalConnections);
+
+  // Calculate today's batch group using day-of-year for any batch count
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - startOfYear) / 86400000);
+  let batchGroup = manualBatch !== null ? manualBatch : (dayOfYear % batchCount);
+
+  console.log(`[profile-collector] Auto-scaling: ${totalConnections} connections → ${batchCount} batches | today's batch: ${batchGroup} (day ${dayOfYear} % ${batchCount})`);
+
+  return { batchGroup, limit, batchCount, totalConnections };
 }
 
 // ── Extract posts from a profile's activity page ────────────────────────────
