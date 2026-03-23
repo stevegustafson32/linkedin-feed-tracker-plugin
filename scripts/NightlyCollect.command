@@ -34,6 +34,13 @@ if [ -d "$SCRIPT_DIR/../.git" ]; then
   npm install --loglevel=error >> "$LOG" 2>&1
 fi
 
+# Part 0.5: Monthly batch shuffle (1st of each month) — randomize visit patterns
+DAY_OF_MONTH=$(date +%d)
+if [ "$DAY_OF_MONTH" = "01" ]; then
+  echo "[$(date)] Monthly batch shuffle..." >> "$LOG"
+  node -e "const db = require('./src/database'); const c = db.getActiveConnectionCount(); const b = db.computeBatchCount(c); const n = db.reassignBatchGroups(b, { shuffle: true }); console.log('Shuffled ' + n + ' connections into ' + b + ' batches');" >> "$LOG" 2>&1
+fi
+
 # Part 1: Feed collection
 echo "[$(date)] Feed collection..." >> "$LOG"
 node src/collector.js >> "$LOG" 2>&1

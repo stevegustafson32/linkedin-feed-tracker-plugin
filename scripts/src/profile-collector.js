@@ -13,7 +13,8 @@
  *     of whether it came from the feed collector, a profile visit, or both
  *
  * Rate limiting:
- *   - Random 3-8s delay between profile visits
+ *   - Daily cap of 150 profiles (stays under LinkedIn detection threshold)
+ *   - Random 5-15s delay between profile visits
  *   - Human-like scrolling on activity pages
  *   - Stops and resumes if LinkedIn shows a challenge page
  *
@@ -40,6 +41,9 @@ const VERBOSE     = process.argv.includes('--verbose') || process.env.LFT_VERBOS
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const rand  = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+// Daily profile visit cap — stay well under LinkedIn's detection threshold
+const DAILY_PROFILE_CAP = 150;
 
 // ── Relative date parser ────────────────────────────────────────────────────
 // LinkedIn shows: "2h", "3d", "1w", "2mo", "1yr", "Just now", "Yesterday"
@@ -335,14 +339,22 @@ async function collectBatch(options = {}) {
     return { success: false, reason: 'no_connections' };
   }
 
+  // Apply daily cap to stay under LinkedIn detection thresholds
+  if (batch.length > DAILY_PROFILE_CAP) {
+    log(`   ⚡ Batch has ${batch.length} profiles — capping at ${DAILY_PROFILE_CAP} (safety limit)`);
+    log(`   Remaining ${batch.length - DAILY_PROFILE_CAP} will be picked up next cycle`);
+    // Shuffle before capping so we don't always skip the same people
+    batch = batch.sort(() => Math.random() - 0.5).slice(0, DAILY_PROFILE_CAP);
+  }
+
   // Apply limit for testing
   if (limit > 0 && batch.length > limit) {
     log(`   (Limited to ${limit} profiles for this run)`);
     batch = batch.slice(0, limit);
   }
 
-  // Estimate time
-  const estMinutes = Math.ceil(batch.length * 6 / 60); // ~6s avg per profile
+  // Estimate time (~13s avg: 3s page load + 10s avg delay between profiles)
+  const estMinutes = Math.ceil(batch.length * 13 / 60);
   log(`   Estimated time: ~${estMinutes} minutes`);
   log('');
 
@@ -433,8 +445,8 @@ async function collectBatch(options = {}) {
 
     profilesDone++;
 
-    // Human-like delay between profiles
-    await sleep(rand(3000, 8000));
+    // Human-like delay between profiles — wider range to avoid pattern detection
+    await sleep(rand(5000, 15000));
   }
 
   // If we visited 20+ profiles and got 0 posts, selectors are probably broken

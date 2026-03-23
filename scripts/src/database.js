@@ -266,10 +266,17 @@ function computeBatchCount(totalConnections) {
   return 21;
 }
 
-const reassignBatchGroups = db.transaction((batchCount) => {
+const reassignBatchGroups = db.transaction((batchCount, { shuffle = false } = {}) => {
   const connections = db.prepare(
     `SELECT id FROM connections WHERE is_active = 1 ORDER BY id`
   ).all();
+  // Shuffle to randomize batch assignments — breaks predictable visit patterns
+  if (shuffle) {
+    for (let i = connections.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [connections[i], connections[j]] = [connections[j], connections[i]];
+    }
+  }
   const update = db.prepare(`UPDATE connections SET batch_group = ? WHERE id = ?`);
   for (let i = 0; i < connections.length; i++) {
     update.run(i % batchCount, connections[i].id);
