@@ -110,6 +110,36 @@ function parseFeedText(rawText, collectedAt) {
     const content = contentLines.join(' ').trim();
     if (content.length < 15) { i = j; continue; } // skip near-empty fragments
 
+    // ── Filter out comment replies ──
+    // Comments within threads are NOT top-level posts and should be skipped.
+    // Heuristics to detect replies:
+
+    // 1. Skip if content contains LinkedIn UI chrome (leaked "Reaction button state:")
+    if (/Reaction button state:/i.test(content)) { i = j; continue; }
+
+    // 2. Skip single-word garbage (e.g., "Skills", "Reply")
+    if (content.split(/\s+/).length === 1) { i = j; continue; }
+
+    // 3. Skip if content starts with "[Capitalized Name] [short text]" pattern
+    // This catches replies like "Sam Obenchain Beyond dope" or "Jonny Price I love that soup"
+    const nameReplyMatch = content.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+([a-z].{0,40})$/i);
+    if (nameReplyMatch && nameReplyMatch[2].length < 50) {
+      // Check if this looks like a person reply (not a real post start)
+      const possibleReply = nameReplyMatch[2];
+      if (!/^(today|this|i|we|the|announcing|posted|published|proud|excited)\b/i.test(possibleReply)) {
+        i = j; continue;
+      }
+    }
+
+    // 4. Skip if content is a very short informal response (< 60 chars, all lowercase/informal)
+    if (content.length < 60 && !/[.!?]{2,}/.test(content) &&
+        /^[a-z]/.test(content) && !/^(today|this|we|excited|proud|announcing|posted)/i.test(content)) {
+      // But allow if it has numbers, URLs, or hashtags (likely real posts)
+      if (!/\d+|#|http|\$|%/.test(content)) {
+        i = j; continue;
+      }
+    }
+
     // Determine post type
     let postType = 'original';
     if (isRepost) postType = 'repost';
@@ -138,6 +168,7 @@ function parseFeedText(rawText, collectedAt) {
       has_link:      hasLink ? 1 : 0,
       raw_text:      contentLines.join('\n').substring(0, 2000),
       content_hash:  makeContentHash(authorName, contentShort),
+      post_url:      null, // populated later by DOM extraction pass
     });
 
     i = j;
@@ -348,7 +379,114 @@ async function collect({ verbose = false, dryRun = false } = {}) {
 
     // Parse posts
     const posts = parseFeedText(cleanedText, collectedAt);
-    log(`   → Found ${posts.length} posts from followed accounts\n`);
+    log(`   → Found ${posts.length} posts from followed accounts`);
+
+    // ── DOM + HTML pass: extract post URLs to merge into text-parsed posts ──
+    // LinkedIn's feed DOM is heavily obfuscated (no container classes, no data-urn
+    // attributes). We use two strategies:
+    //   1. Find <a href="/feed/update/..."> links and grab surrounding text
+    //   2. Regex-scan raw HTML for URN patterns and grab nearby text context
+    log('   → Extracting post URLs from DOM + HTML...');
+    const postUrlMap = await page.evaluate(() => {
+      const urlEntries = [];
+      const seenUrns = new Set();
+
+      // ── Strategy 1: Find actual <a> links with post URLs ──
+      const linkEls = document.querySelectorAll('a[href*="/feed/update/"], a[href*="/activity/"]');
+      linkEls.forEach(linkEl => {
+        const url = linkEl.getAttribute('href');
+        const cleanUrl = url.split('?')[0];
+        // Extract URN for dedup
+        const urnMatch = cleanUrl.match(/urn:li:(share|activity|ugcPost):\d+/);
+        const urn = urnMatch ? urnMatch[0] : cleanUrl;
+        if (seenUrns.has(urn)) return;
+        seenUrns.add(urn);
+
+        // Link's own text (often the post content or article title)
+        const linkText = (linkEl.textContent || '').trim().replace(/\n+/g, ' ').substring(0, 500).toLowerCase();
+
+        // Walk up DOM for container text
+        let container = linkEl;
+        for (let up = 0; up < 15; up++) {
+          container = container.parentElement;
+          if (!container) break;
+          const rect = container.getBoundingClientRect();
+          if (rect.height > 150 && rect.width > 400) break;
+        }
+        const fullText = container
+          ? (container.innerText || '').substring(0, 1500).replace(/\n+/g, ' ').toLowerCase()
+          : '';
+
+        urlEntries.push({
+          url: cleanUrl.startsWith('http') ? cleanUrl : `https://www.linkedin.com${cleanUrl}`,
+          searchText: `${linkText} ${fullText}`,
+        });
+      });
+
+      // ── Strategy 2: Regex-scan full HTML for URNs not found as links ──
+      const html = document.documentElement.outerHTML;
+      const urnRegex = /urn:li:(activity|share|ugcPost):(\d+)/g;
+      let match;
+      while ((match = urnRegex.exec(html)) !== null) {
+        const urn = match[0];
+        if (seenUrns.has(urn)) continue;
+        seenUrns.add(urn);
+
+        const url = `https://www.linkedin.com/feed/update/${urn}/`;
+        // Grab surrounding HTML context (~500 chars each side) for text matching
+        const start = Math.max(0, match.index - 500);
+        const end = Math.min(html.length, match.index + 500);
+        const context = html.substring(start, end)
+          .replace(/<[^>]+>/g, ' ')  // strip HTML tags
+          .replace(/\s+/g, ' ')       // normalize whitespace
+          .toLowerCase();
+
+        urlEntries.push({ url, searchText: context });
+      }
+
+      return urlEntries;
+    });
+
+    log(`   → Found ${postUrlMap.length} post URLs (links + HTML URNs)`);
+
+    // Match URLs to text-parsed posts by checking if post content appears
+    // anywhere in the URL entry's search text
+    let urlsMatched = 0;
+    for (const post of posts) {
+      if (post.post_url) continue;
+
+      const postContent = (post.content_short || '').toLowerCase();
+      if (postContent.length < 20) continue;
+
+      // Build search phrases from the post content (multiple chunks for robustness)
+      const chunks = [
+        postContent.substring(0, 40),
+        postContent.length > 60 ? postContent.substring(20, 60) : null,
+        postContent.length > 100 ? postContent.substring(50, 90) : null,
+      ].filter(Boolean);
+
+      // Also try matching by author name + short content start
+      const authorLower = (post.author_name || '').toLowerCase();
+
+      for (const entry of postUrlMap) {
+        const st = entry.searchText;
+
+        // Content match: any chunk found in the search text
+        const contentMatch = chunks.some(chunk => st.includes(chunk));
+
+        // Author + partial content match
+        const authorMatch = authorLower.length > 3 &&
+          st.includes(authorLower.substring(0, 15)) &&
+          postContent.length >= 15 && st.includes(postContent.substring(0, 20));
+
+        if (contentMatch || authorMatch) {
+          post.post_url = entry.url;
+          urlsMatched++;
+          break;
+        }
+      }
+    }
+    log(`   → Matched ${urlsMatched}/${posts.length} posts with URLs\n`);
 
     const duration = Date.now() - start;
 
@@ -358,7 +496,7 @@ async function collect({ verbose = false, dryRun = false } = {}) {
       posts.slice(0, 20).forEach((p, i) => {
         console.log(`  [${i+1}] ${p.author_name || 'Unknown'} · ${p.post_type}`);
         console.log(`       ${p.content.substring(0, 120)}...`);
-        console.log(`       ❤️ ${p.likes}  💬 ${p.comments}  hash: ${p.content_hash?.substring(0,8)}\n`);
+        console.log(`       ❤️ ${p.likes}  💬 ${p.comments}  hash: ${p.content_hash?.substring(0,8)}  ${p.post_url ? '🔗' : '—'}\n`);
       });
       if (posts.length > 20) console.log(`  ... and ${posts.length - 20} more\n`);
       await context.close();

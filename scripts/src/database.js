@@ -73,6 +73,10 @@ db.exec(`
 try { db.exec('ALTER TABLE posts ADD COLUMN content_hash TEXT'); } catch {}
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_hash ON posts(content_hash) WHERE content_hash IS NOT NULL');
 
+// ── Phase 2b: post_url migration (safe to run on existing DBs) ────────────────
+try { db.exec('ALTER TABLE posts ADD COLUMN post_url TEXT'); } catch {}
+db.exec('CREATE INDEX IF NOT EXISTS idx_posts_url ON posts(post_url) WHERE post_url IS NOT NULL');
+
 // ── Config helpers ────────────────────────────────────────────────────────────
 
 const getConfig = (key, fallback = null) => {
@@ -97,11 +101,11 @@ const insertPost = db.prepare(`
   INSERT OR IGNORE INTO posts
     (collected_at, post_date, author_name, author_title, post_type,
      content, content_short, engagement, likes, comments,
-     is_repost, repost_author, has_link, raw_text, content_hash)
+     is_repost, repost_author, has_link, raw_text, content_hash, post_url)
   VALUES
     (@collected_at, @post_date, @author_name, @author_title, @post_type,
      @content, @content_short, @engagement, @likes, @comments,
-     @is_repost, @repost_author, @has_link, @raw_text, @content_hash)
+     @is_repost, @repost_author, @has_link, @raw_text, @content_hash, @post_url)
 `);
 
 const insertMany = db.transaction((posts) => {
