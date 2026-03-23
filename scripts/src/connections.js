@@ -70,24 +70,63 @@ async function extractConnections(page, selConfig) {
         let name = null;
         let headline = null;
 
+        // ── Find the parent card container (li, div wrapper, etc.) ──
+        const card = a.closest('li') || a.parentElement?.parentElement || a.parentElement;
+
+        // ── Extract name ──
         if (nameSel === 'auto') {
-          // Auto mode: get first meaningful text block
           name = a.textContent.trim().split('\n')[0]?.trim();
         } else {
-          const nameEl = a.querySelector(nameSel);
+          // Try inside the <a> first, then inside the card
+          const nameEl = a.querySelector(nameSel) || (card !== a ? card.querySelector(nameSel) : null);
           name = nameEl ? nameEl.textContent.trim() : a.textContent.trim().split('\n')[0]?.trim();
         }
 
+        // ── Extract headline — search card container, not just inside <a> ──
         if (headlineSel === 'auto') {
-          const lines = a.textContent.trim().split('\n').map(l => l.trim()).filter(Boolean);
-          headline = lines[1] || null;
+          // First try: text lines inside the <a>
+          const aLines = a.textContent.trim().split('\n').map(l => l.trim()).filter(Boolean);
+          headline = aLines[1] || null;
+
+          // If nothing inside <a>, search the parent card for headline text
+          if (!headline && card && card !== a) {
+            const cardLines = card.textContent.trim().split('\n').map(l => l.trim()).filter(l =>
+              l.length > 2 &&
+              !['Connected', 'Connect', 'Message', 'Follow', 'Pending', 'Send', '•', '...'].includes(l) &&
+              !/^\d+\s*(mutual|connection)/.test(l)
+            );
+            // Name is typically first, headline is second
+            const nameIdx = cardLines.findIndex(l => name && l.includes(name));
+            if (nameIdx >= 0 && cardLines[nameIdx + 1]) {
+              headline = cardLines[nameIdx + 1];
+            } else if (cardLines.length >= 2) {
+              headline = cardLines[1];
+            }
+          }
         } else {
-          const headEl = a.querySelector(headlineSel);
+          // Explicit selector: try inside <a> first, then inside the card
+          const headEl = a.querySelector(headlineSel) || (card !== a ? card.querySelector(headlineSel) : null);
           headline = headEl ? headEl.textContent.trim() : null;
+
+          // Last resort for explicit selectors: scan card text lines
+          if (!headline && card && card !== a) {
+            const cardLines = card.textContent.trim().split('\n').map(l => l.trim()).filter(l =>
+              l.length > 2 &&
+              !['Connected', 'Connect', 'Message', 'Follow', 'Pending', 'Send', '•', '...'].includes(l) &&
+              !/^\d+\s*(mutual|connection)/.test(l)
+            );
+            const nameIdx = cardLines.findIndex(l => name && l.includes(name));
+            if (nameIdx >= 0 && cardLines[nameIdx + 1]) {
+              headline = cardLines[nameIdx + 1];
+            }
+          }
         }
 
         // Clean up name (remove "Connected" badges, extra whitespace)
         if (name) name = name.replace(/\s*Connected\s*$/i, '').trim();
+        // Clean up headline
+        if (headline) headline = headline.replace(/\s*Connected\s*$/i, '').trim();
+        if (headline && headline === name) headline = null; // don't duplicate name as headline
 
         return { name, headline, href };
       }).filter(item => item.name && item.name.length > 1 && item.href);
@@ -156,7 +195,10 @@ async function extractConnections(page, selConfig) {
       const walker = document.createTreeWalker(li, NodeFilter.SHOW_TEXT, null);
       while (walker.nextNode()) {
         const text = walker.currentNode.textContent.trim();
-        if (text.length > 1 && !['Connected', 'Connect', 'Message', 'Follow', '•', '...'].includes(text)) {
+        if (text.length > 1 &&
+            !['Connected', 'Connect', 'Message', 'Follow', 'Pending', 'Send', '•', '...'].includes(text) &&
+            !/^\d+\s*(mutual|connection)/.test(text) &&
+            !/^\d+[smhdw]$/.test(text)) {
           textBlocks.push(text);
         }
       }
@@ -198,11 +240,33 @@ async function extractConnections(page, selConfig) {
       if (a.closest('nav, header, [role="navigation"]')) continue;
 
       const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      const name = lines[0] || text;
-      const headline = lines[1] || null;
+      const name = (lines[0] || text).replace(/\s*Connected\s*$/i, '').trim();
+      let headline = lines[1] || null;
+
+      // If no headline inside <a>, walk up to parent card
+      if (!headline) {
+        const card = a.closest('li') || a.parentElement?.parentElement;
+        if (card && card !== a) {
+          const cardLines = card.textContent.trim().split('\n').map(l => l.trim()).filter(l =>
+            l.length > 2 &&
+            !['Connected', 'Connect', 'Message', 'Follow', 'Pending', 'Send', '•', '...'].includes(l) &&
+            !/^\d+\s*(mutual|connection)/.test(l)
+          );
+          const nameIdx = cardLines.findIndex(l => name && l.includes(name));
+          if (nameIdx >= 0 && cardLines[nameIdx + 1]) {
+            headline = cardLines[nameIdx + 1];
+          } else if (cardLines.length >= 2) {
+            headline = cardLines[1];
+          }
+        }
+      }
+
+      // Clean up
+      if (headline) headline = headline.replace(/\s*Connected\s*$/i, '').trim();
+      if (headline && headline === name) headline = null;
 
       if (name.length > 1) {
-        results.push({ name: name.replace(/\s*Connected\s*$/i, '').trim(), headline, href });
+        results.push({ name, headline, href });
       }
     }
 
