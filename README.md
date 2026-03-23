@@ -82,10 +82,15 @@ All data stored locally at `scripts/data/feeds.db` (SQLite). No cloud. No API ke
 
 This is **Plugin 1** of a 3-plugin ecosystem. Here's what's next:
 
-### Plugin 2: Content Engine
+### Plugin 2: [Content Engine](https://github.com/stevegustafson32/linkedin-content-engine-plugin)
 Turn network intelligence into posts. Configure your posting cadence, pick your topics, and get AI-generated post ideas with multiple hook variations — question, story, contrarian, data-driven. Each variation scored before you see it. Learns from your actual post performance over time.
 
-### Plugin 3: Audience Simulator
+### Plugin 3: [Audience Simulator](https://github.com/stevegustafson32/linkedin-audience-simulator-plugin)
 Before you post, know who'll engage. Builds audience segments from your actual connections — role, seniority, industry, posting behavior. Predicts which post variation will get the most traction and explains why. Calibrates against real results every week.
 
 **The full loop:** Feed Tracker collects data → Content Engine generates ideas → Audience Simulator scores them → you pick and post → Feed Tracker measures performance → Content Engine learns → repeat.
+
+## Resources
+
+- [Getting Started Guide](https://stevegustafson32.github.io/cowork-guide/linkedin-feed-tracker.html)
+- [Cowork Guide](https://stevegustafson32.github.io/cowork-guide/)
