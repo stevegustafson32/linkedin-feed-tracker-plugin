@@ -24,8 +24,7 @@ const {
   getConfig, upsertManyOwnPosts, makeContentHash, getOwnPostStats,
 } = require('./database');
 const { loadSelectors, dumpDiagnostic, flagForRepair, clearRepairFlag } = require('./self-heal');
-
-const PROFILE_DIR = path.join(__dirname, '..', 'data', 'browser-profile');
+const { PROFILE_DIR } = require('./paths');
 const VERBOSE     = process.argv.includes('--verbose') || process.env.LFT_VERBOSE;
 const BASELINE    = process.argv.includes('--baseline');
 
@@ -163,35 +162,50 @@ async function scrapeOwnPosts(options = {}) {
       if (VERBOSE && i % 5 === 0) log(`   Scrolling... ${i + 1}/${scrolls}`);
     }
 
-    // Load selectors from config
-    const selCfg = loadSelectors('profile');
-    const containerSels = (selCfg.postContainers || [
-      '.feed-shared-update-v2',
-      '[data-urn*="activity"]',
-      '.profile-creator-shared-feed-update__container',
-      '.occludable-update',
-    ]).join(', ');
-
-    // Extract posts
-    const rawPosts = await page.evaluate(({ containerSels }) => {
+    // Extract posts using data-urn containers (unique per post, no duplicates)
+    const rawPosts = await page.evaluate(() => {
       const posts = [];
-      const containers = document.querySelectorAll(containerSels);
+      const seenUrns = new Set();
+
+      // Primary: data-urn containers (unique per post — avoids the duplicate
+      // container issue where both .feed-shared-update-v2 and .occludable-update
+      // match the same post)
+      const containers = document.querySelectorAll('div[data-urn*="activity"]');
 
       containers.forEach(container => {
-        // Get post text
-        const textEl = container.querySelector('.feed-shared-text, .break-words, .update-components-text, [dir="ltr"]');
-        if (!textEl) return;
-        const content = textEl.textContent.trim();
-        if (content.length < 15) return;
+        // Deduplicate by URN
+        const urn = container.getAttribute('data-urn');
+        if (seenUrns.has(urn)) return;
+        seenUrns.add(urn);
+
+        // Get post text — IMPORTANT: [dir="ltr"] index 0 is always the author
+        // name span (e.g. "Steve GustafsonSteve Gustafson"). The actual post
+        // content is at index 1+. We collect all [dir="ltr"] elements and pick
+        // the first one that looks like real content (>30 chars, not a doubled name).
+        const ltrEls = container.querySelectorAll('[dir="ltr"]');
+        let content = null;
+        for (const el of ltrEls) {
+          const text = el.textContent.trim();
+          // Skip short text (author names, labels)
+          if (text.length < 30) continue;
+          // Skip doubled names like "Steve GustafsonSteve Gustafson"
+          const half = text.substring(0, Math.floor(text.length / 2));
+          if (text === half + half) continue;
+          content = text;
+          break;
+        }
+        if (!content) return;
 
         // Get post URL (permalink)
         const linkEl = container.querySelector('a[href*="/activity/"], a[href*="/feed/update/"]');
         const postUrl = linkEl ? linkEl.getAttribute('href') : null;
 
-        // Engagement numbers
+        // Engagement numbers — try multiple selector strategies
         const engEl = container.querySelector('.social-details-social-counts, .social-details-social-activity');
         const engText = engEl ? engEl.textContent.trim() : '';
         let likes = 0, comments = 0, reposts = 0;
+
+        // Parse "X reactions", "X likes", "X comments", "X reposts"
         const likeMatch = engText.match(/([\d,]+)\s*(?:like|reaction)/i);
         const commentMatch = engText.match(/([\d,]+)\s*comment/i);
         const repostMatch = engText.match(/([\d,]+)\s*repost/i);
@@ -199,16 +213,24 @@ async function scrapeOwnPosts(options = {}) {
         if (commentMatch) comments = parseInt(commentMatch[1].replace(/,/g, ''), 10);
         if (repostMatch) reposts = parseInt(repostMatch[1].replace(/,/g, ''), 10);
 
+        // Also try plain number extraction if structured parsing missed
+        if (likes === 0 && comments === 0 && reposts === 0 && engText) {
+          const nums = engText.match(/(\d[\d,]*)/g);
+          if (nums && nums.length >= 1) likes = parseInt(nums[0].replace(/,/g, ''), 10);
+          if (nums && nums.length >= 2) comments = parseInt(nums[1].replace(/,/g, ''), 10);
+          if (nums && nums.length >= 3) reposts = parseInt(nums[2].replace(/,/g, ''), 10);
+        }
+
         // Time
         const timeEl = container.querySelector('time');
         const timeAttr = timeEl ? timeEl.getAttribute('datetime') : null;
         const timeText = timeEl ? timeEl.textContent.trim() : null;
 
         // Post type detection
-        const hasImage = container.querySelector('img.feed-shared-image') !== null;
-        const hasVideo = container.querySelector('video, .feed-shared-linkedin-video') !== null;
-        const hasPoll = container.querySelector('.feed-shared-poll') !== null;
-        const hasArticle = container.querySelector('.feed-shared-article') !== null;
+        const hasImage = container.querySelector('img.feed-shared-image, img[src*="media"]') !== null;
+        const hasVideo = container.querySelector('video, .feed-shared-linkedin-video, [data-video]') !== null;
+        const hasPoll = container.querySelector('.feed-shared-poll, [data-poll]') !== null;
+        const hasArticle = container.querySelector('.feed-shared-article, .article-card') !== null;
         const hasCarousel = container.querySelector('.feed-shared-carousel, [data-carousel]') !== null;
 
         let postType = 'text';
@@ -231,7 +253,7 @@ async function scrapeOwnPosts(options = {}) {
       });
 
       return posts;
-    }, { containerSels });
+    });
 
     console.log(`   Found ${rawPosts.length} posts on your activity page`);
 
