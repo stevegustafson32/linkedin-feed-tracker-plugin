@@ -212,119 +212,192 @@ function generateHTML(data) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LinkedIn Feed Tracker — Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"><\/script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e0; padding: 24px; }
-  .header { text-align: center; margin-bottom: 32px; }
-  .header h1 { font-size: 28px; color: #fff; margin-bottom: 4px; }
-  .header .subtitle { color: #888; font-size: 14px; }
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
-  .stat-card { background: #16161e; border: 1px solid #2a2a3a; border-radius: 12px; padding: 20px; text-align: center; }
-  .stat-card .value { font-size: 32px; font-weight: 700; color: #fff; }
-  .stat-card .label { font-size: 13px; color: #888; margin-top: 4px; }
-  .stat-card .sublabel { font-size: 11px; color: #555; margin-top: 2px; }
-  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-  .chart-card { background: #16161e; border: 1px solid #2a2a3a; border-radius: 12px; padding: 20px; }
-  .chart-card h3 { font-size: 16px; color: #fff; margin-bottom: 16px; }
-  .section { background: #16161e; border: 1px solid #2a2a3a; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-  .section h2 { font-size: 18px; color: #fff; margin-bottom: 16px; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e0e0e0; display: flex; flex-direction: column; }
+
+  /* Header bar */
+  .header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px 12px; flex-shrink: 0; }
+  .header h1 { font-size: 22px; color: #fff; }
+  .header .subtitle { color: #666; font-size: 12px; }
+
+  /* Stats strip */
+  .stats-strip { display: flex; gap: 12px; padding: 0 24px 16px; flex-shrink: 0; overflow-x: auto; }
+  .stat { background: #16161e; border: 1px solid #2a2a3a; border-radius: 10px; padding: 14px 20px; min-width: 140px; text-align: center; flex-shrink: 0; }
+  .stat .val { font-size: 26px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .stat .lbl { font-size: 11px; color: #888; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .sub { font-size: 10px; color: #555; }
+
+  /* Tab bar */
+  .tab-bar { display: flex; gap: 0; padding: 0 24px; flex-shrink: 0; border-bottom: 1px solid #2a2a3a; }
+  .tab { padding: 10px 24px; font-size: 14px; font-weight: 600; color: #666; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none; }
+  .tab:hover { color: #aaa; }
+  .tab.active { color: #6b8afd; border-bottom-color: #6b8afd; }
+
+  /* Tab content */
+  .tab-content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .tab-panel { display: none; height: 100%; }
+  .tab-panel.active { display: block; }
+
+  /* Charts */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .chart-card { background: #16161e; border: 1px solid #2a2a3a; border-radius: 10px; padding: 16px; }
+  .chart-card h3 { font-size: 14px; color: #ccc; margin-bottom: 12px; font-weight: 600; }
+
+  /* Tables */
+  .tbl-wrap { background: #16161e; border: 1px solid #2a2a3a; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+  .tbl-wrap h3 { font-size: 14px; color: #ccc; padding: 14px 16px 0; font-weight: 600; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #2a2a3a; color: #888; font-weight: 600; }
-  td { padding: 8px 12px; border-bottom: 1px solid #1a1a2a; }
+  th { text-align: left; padding: 10px 14px; border-bottom: 1px solid #2a2a3a; color: #666; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
+  td { padding: 9px 14px; border-bottom: 1px solid #1a1a24; }
+  tr:last-child td { border-bottom: none; }
   a { color: #6b8afd; text-decoration: none; }
   a:hover { text-decoration: underline; }
-  .footer { text-align: center; color: #555; font-size: 12px; margin-top: 32px; }
-  @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .empty-state { text-align: center; padding: 48px 24px; color: #555; }
+  .empty-state .icon { font-size: 36px; margin-bottom: 8px; }
+
+  @media (max-width: 768px) {
+    .charts-row { grid-template-columns: 1fr; }
+    .stats-strip { flex-wrap: wrap; }
+    .stat { min-width: 100px; }
+  }
 </style>
 </head>
 <body>
+
+  <!-- Fixed header -->
   <div class="header">
-    <h1>LinkedIn Feed Tracker</h1>
-    <div class="subtitle">${esc(data.linkedin_user)} · Updated ${new Date(data.last_updated).toLocaleString()}</div>
-  </div>
-
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="value">${data.total_connections.toLocaleString()}</div>
-      <div class="label">Connections</div>
-      <div class="sublabel">${data.active_posters} active posters</div>
+    <div>
+      <h1>LinkedIn Feed Tracker</h1>
+      <div class="subtitle">${esc(data.linkedin_user)}</div>
     </div>
-    <div class="stat-card">
-      <div class="value">${data.feed_posts.toLocaleString()}</div>
-      <div class="label">Feed Posts Tracked</div>
-      <div class="sublabel">${data.days_tracking} days tracking</div>
-    </div>
-    <div class="stat-card">
-      <div class="value">${data.own_posts}</div>
-      <div class="label">Your Posts</div>
-    </div>
-    <div class="stat-card">
-      <div class="value">${data.batch_count}</div>
-      <div class="label">Batch Rotation</div>
-      <div class="sublabel">~${data.profiles_per_night} profiles/night</div>
-    </div>
-    <div class="stat-card">
-      <div class="value">${data.collection_runs_successful}</div>
-      <div class="label">Successful Runs</div>
-      <div class="sublabel">${data.collection_runs_total} total</div>
-    </div>
-    <div class="stat-card">
-      <div class="value">${data.ever_scraped}</div>
-      <div class="label">Profiles Scraped</div>
-      <div class="sublabel">of ${data.active_connections} active</div>
+    <div style="text-align: right;">
+      <div style="font-size: 11px; color: #555;">Updated</div>
+      <div style="font-size: 13px; color: #888;">${new Date(data.last_updated).toLocaleString()}</div>
     </div>
   </div>
 
-  <div class="charts-grid">
-    <div class="chart-card">
-      <h3>Collection Timeline</h3>
-      <canvas id="timelineChart"></canvas>
+  <!-- Stats strip — always visible -->
+  <div class="stats-strip">
+    <div class="stat">
+      <div class="val">${data.total_connections.toLocaleString()}</div>
+      <div class="lbl">Connections</div>
+      <div class="sub">${data.active_posters} active posters</div>
     </div>
-    <div class="chart-card">
-      <h3>Top Authors</h3>
-      <canvas id="authorsChart"></canvas>
+    <div class="stat">
+      <div class="val">${data.feed_posts.toLocaleString()}</div>
+      <div class="lbl">Posts Tracked</div>
+      <div class="sub">${data.days_tracking} days</div>
     </div>
-    <div class="chart-card">
-      <h3>Post Type Distribution</h3>
-      <canvas id="typeChart"></canvas>
+    <div class="stat">
+      <div class="val">${data.own_posts}</div>
+      <div class="lbl">Your Posts</div>
     </div>
-    <div class="chart-card">
-      <h3>Batch Distribution</h3>
-      <canvas id="batchChart"></canvas>
+    <div class="stat">
+      <div class="val">${data.batch_count}</div>
+      <div class="lbl">Batches</div>
+      <div class="sub">~${data.profiles_per_night}/night</div>
+    </div>
+    <div class="stat">
+      <div class="val">${data.collection_runs_successful}</div>
+      <div class="lbl">Runs</div>
+      <div class="sub">${data.collection_runs_total} total</div>
+    </div>
+    <div class="stat">
+      <div class="val">${data.ever_scraped}</div>
+      <div class="lbl">Scraped</div>
+      <div class="sub">of ${data.active_connections}</div>
     </div>
   </div>
 
-  <div class="section">
-    <h2>Top Network Posts</h2>
-    <table>
-      <thead><tr><th>Author</th><th>Content</th><th>Engagement</th><th>Type</th></tr></thead>
-      <tbody>${topPostRows}</tbody>
-    </table>
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <div class="tab active" data-tab="network">Network Activity</div>
+    <div class="tab" data-tab="yours">Your Posts</div>
+    <div class="tab" data-tab="system">System Health</div>
   </div>
 
-  ${data.own_posts_list.length > 0 ? `<div class="section">
-    <h2>Your Post Performance</h2>
-    <table>
-      <thead><tr><th>Content</th><th>Likes</th><th>Comments</th><th>Reposts</th><th>Type</th></tr></thead>
-      <tbody>${ownPostRows}</tbody>
-    </table>
-  </div>` : ''}
+  <!-- Tab panels -->
+  <div class="tab-content">
 
-  <div class="section">
-    <h2>Profile Scrape History</h2>
-    <table>
-      <thead><tr><th>Date</th><th>Batch</th><th>Profiles</th><th>Posts</th><th>Duration</th><th>Status</th></tr></thead>
-      <tbody>${profileRunRows}</tbody>
-    </table>
-  </div>
+    <!-- TAB 1: Network Activity -->
+    <div class="tab-panel active" id="panel-network">
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3>Collection Timeline</h3>
+          <canvas id="timelineChart"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Top Authors</h3>
+          <canvas id="authorsChart"></canvas>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3>Post Types</h3>
+          <canvas id="typeChart"></canvas>
+        </div>
+        <div class="tbl-wrap" style="margin-bottom: 0;">
+          <h3>Top Network Posts</h3>
+          <table>
+            <thead><tr><th>Author</th><th>Content</th><th>Engagement</th><th>Type</th></tr></thead>
+            <tbody>${topPostRows || '<tr><td colspan="4" style="text-align:center;color:#555;padding:24px;">No posts yet</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
-  <div class="footer">
-    LinkedIn Feed Tracker · Auto-generated dashboard · ${data.batch_count}-batch rotation
+    <!-- TAB 2: Your Posts -->
+    <div class="tab-panel" id="panel-yours">
+      ${data.own_posts_list.length > 0 ? `
+      <div class="tbl-wrap">
+        <h3>Post Performance</h3>
+        <table>
+          <thead><tr><th>Content</th><th>Likes</th><th>Comments</th><th>Reposts</th><th>Type</th></tr></thead>
+          <tbody>${ownPostRows}</tbody>
+        </table>
+      </div>` : `
+      <div class="empty-state">
+        <div class="icon">📝</div>
+        <div>No own posts tracked yet. Post on LinkedIn and the nightly collector will pick it up.</div>
+      </div>`}
+    </div>
+
+    <!-- TAB 3: System Health -->
+    <div class="tab-panel" id="panel-system">
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3>Batch Distribution</h3>
+          <canvas id="batchChart"></canvas>
+        </div>
+        <div class="tbl-wrap" style="margin-bottom: 0;">
+          <h3>Profile Scrape History</h3>
+          <table>
+            <thead><tr><th>Date</th><th>Batch</th><th>Profiles</th><th>Posts</th><th>Duration</th><th>Status</th></tr></thead>
+            <tbody>${profileRunRows || '<tr><td colspan="6" style="text-align:center;color:#555;padding:24px;">No scrape runs yet</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 <script>
-const chartDefaults = { color: '#888', borderColor: '#2a2a3a' };
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    // Trigger chart resize for hidden panels
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+  });
+});
+
 Chart.defaults.color = '#888';
 Chart.defaults.borderColor = '#2a2a3a';
 
@@ -334,11 +407,11 @@ new Chart(document.getElementById('timelineChart'), {
   data: {
     labels: ${timelineLabels},
     datasets: [
-      { label: 'Posts Found', data: ${timelineData}, borderColor: '#6b8afd', backgroundColor: 'rgba(107,138,253,0.1)', fill: true, tension: 0.3 },
-      { label: 'New Posts', data: ${timelineNew}, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', fill: true, tension: 0.3 }
+      { label: 'Posts Found', data: ${timelineData}, borderColor: '#6b8afd', backgroundColor: 'rgba(107,138,253,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+      { label: 'New Posts', data: ${timelineNew}, borderColor: '#4ade80', backgroundColor: 'rgba(74,222,128,0.1)', fill: true, tension: 0.3, pointRadius: 2 }
     ]
   },
-  options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+  options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 16 } } }, scales: { y: { beginAtZero: true } } }
 });
 
 // Authors
@@ -346,9 +419,9 @@ new Chart(document.getElementById('authorsChart'), {
   type: 'bar',
   data: {
     labels: ${topAuthorsLabels},
-    datasets: [{ label: 'Posts', data: ${topAuthorsData}, backgroundColor: '#6b8afd', borderRadius: 4 }]
+    datasets: [{ label: 'Posts', data: ${topAuthorsData}, backgroundColor: '#6b8afd', borderRadius: 3 }]
   },
-  options: { responsive: true, indexAxis: 'y', plugins: { legend: { display: false } } }
+  options: { responsive: true, maintainAspectRatio: true, indexAxis: 'y', plugins: { legend: { display: false } } }
 });
 
 // Post types
@@ -356,9 +429,9 @@ new Chart(document.getElementById('typeChart'), {
   type: 'doughnut',
   data: {
     labels: ${typeLabels},
-    datasets: [{ data: ${typeData}, backgroundColor: ['#6b8afd','#4ade80','#f59e0b','#ef4444','#a78bfa','#ec4899','#14b8a6'] }]
+    datasets: [{ data: ${typeData}, backgroundColor: ['#6b8afd','#4ade80','#f59e0b','#ef4444','#a78bfa','#ec4899','#14b8a6'], borderWidth: 0 }]
   },
-  options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+  options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 12 } } } }
 });
 
 // Batch distribution
@@ -366,11 +439,11 @@ new Chart(document.getElementById('batchChart'), {
   type: 'bar',
   data: {
     labels: ${batchLabels},
-    datasets: [{ label: 'Connections', data: ${batchData}, backgroundColor: '#4ade80', borderRadius: 4 }]
+    datasets: [{ label: 'Connections', data: ${batchData}, backgroundColor: '#4ade80', borderRadius: 3 }]
   },
-  options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
 });
-</script>
+<\/script>
 </body>
 </html>`;
 }
