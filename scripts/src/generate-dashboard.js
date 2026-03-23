@@ -105,13 +105,24 @@ function getData() {
     ORDER BY batch_group
   `).all();
 
-  // Top network posts
-  data.top_posts = db.prepare(`
-    SELECT author_name, author_title, content_short, content, likes, comments, post_type, post_date, post_url
-    FROM posts
-    ORDER BY (likes + comments) DESC
-    LIMIT 15
-  `).all();
+  // Top network posts (include scoring columns if available)
+  try {
+    data.top_posts = db.prepare(`
+      SELECT author_name, author_title, content_short, content, likes, comments, post_type, post_date, post_url,
+             relevance_score, action_flag, focus_areas
+      FROM posts
+      ORDER BY (likes + comments) DESC
+      LIMIT 15
+    `).all();
+  } catch {
+    // Fallback without scoring columns
+    data.top_posts = db.prepare(`
+      SELECT author_name, author_title, content_short, content, likes, comments, post_type, post_date, post_url
+      FROM posts
+      ORDER BY (likes + comments) DESC
+      LIMIT 15
+    `).all();
+  }
 
   // All posts for topic extraction
   data.all_posts = db.prepare(`
@@ -119,6 +130,78 @@ function getData() {
     FROM posts
     ORDER BY post_date DESC
   `).all();
+
+  // ── Relevance scoring data ──────────────────────────────────────────────────
+  // Check if scoring columns exist
+  const postCols = db.prepare("PRAGMA table_info(posts)").all().map(c => c.name);
+  data.has_scoring = postCols.includes('relevance_score');
+
+  if (data.has_scoring) {
+    // Score distribution
+    const scoreDist = db.prepare(`
+      SELECT relevance_score as score, COUNT(*) as cnt
+      FROM posts
+      WHERE scored_at IS NOT NULL
+      GROUP BY relevance_score
+      ORDER BY relevance_score DESC
+    `).all();
+    data.score_distribution = {};
+    for (const r of scoreDist) data.score_distribution[r.score] = r.cnt;
+
+    // Action flag counts
+    const flagCounts = db.prepare(`
+      SELECT action_flag, COUNT(*) as cnt
+      FROM posts
+      WHERE scored_at IS NOT NULL
+      GROUP BY action_flag
+    `).all();
+    data.action_flags = {};
+    for (const r of flagCounts) data.action_flags[r.action_flag] = r.cnt;
+
+    // Top relevant posts (score 3+)
+    data.relevant_posts = db.prepare(`
+      SELECT author_name, author_title, content_short, relevance_score, focus_areas, action_flag, likes, comments, post_url
+      FROM posts
+      WHERE relevance_score >= 3 AND scored_at IS NOT NULL
+      ORDER BY relevance_score DESC, (likes + comments) DESC
+      LIMIT 10
+    `).all();
+
+    // Focus area distribution (aggregate across all scored posts)
+    const allFocusAreas = db.prepare(`
+      SELECT focus_areas FROM posts WHERE scored_at IS NOT NULL AND focus_areas != '[]'
+    `).all();
+    const areaCounts = {};
+    const areaEngagement = {};
+    for (const row of allFocusAreas) {
+      try {
+        const areas = JSON.parse(row.focus_areas);
+        for (const a of areas) {
+          if (!areaCounts[a.name]) { areaCounts[a.name] = 0; areaEngagement[a.name] = 0; }
+          areaCounts[a.name]++;
+          areaEngagement[a.name] += a.score;
+        }
+      } catch {}
+    }
+    data.focus_area_distribution = Object.entries(areaCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count, avgScore: (areaEngagement[name] / count).toFixed(1) }));
+
+    // Scored vs unscored
+    data.scored_count = db.prepare(`SELECT COUNT(*) as cnt FROM posts WHERE scored_at IS NOT NULL`).get().cnt;
+    data.unscored_count = db.prepare(`SELECT COUNT(*) as cnt FROM posts WHERE scored_at IS NULL`).get().cnt;
+
+    // Top relevant post for insight card
+    data.top_relevant = data.relevant_posts.length > 0 ? data.relevant_posts[0] : null;
+  } else {
+    data.score_distribution = {};
+    data.action_flags = {};
+    data.relevant_posts = [];
+    data.focus_area_distribution = [];
+    data.scored_count = 0;
+    data.unscored_count = 0;
+    data.top_relevant = null;
+  }
 
   // Own post performance
   try {
@@ -237,16 +320,44 @@ function generateHTML(data) {
   const topicData   = JSON.stringify(data.topics.map(t => t.count));
   const topicEngData = JSON.stringify(data.topics.map(t => t.engagement));
 
+  // Score badge helper
+  function scoreBadge(score, actionFlag) {
+    if (score == null || score === 0) return '<span style="color:#333;">—</span>';
+    const colors = {
+      5: { bg: 'rgba(74,222,128,0.15)', text: '#4ade80', label: '★' },
+      4: { bg: 'rgba(107,138,253,0.15)', text: '#6b8afd', label: '●' },
+      3: { bg: 'rgba(167,139,250,0.15)', text: '#a78bfa', label: '●' },
+      2: { bg: 'rgba(255,255,255,0.05)', text: '#555', label: '·' },
+      1: { bg: 'rgba(255,255,255,0.03)', text: '#333', label: '·' },
+    };
+    const c = colors[score] || colors[1];
+    return `<span style="background:${c.bg};color:${c.text};padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;white-space:nowrap;">${c.label} ${score}</span>`;
+  }
+
+  // Focus area pills for a post
+  function focusAreaPills(focusAreasJson) {
+    if (!focusAreasJson || focusAreasJson === '[]') return '';
+    try {
+      const areas = JSON.parse(focusAreasJson);
+      return areas.slice(0, 2).map(a =>
+        `<span style="background:rgba(107,138,253,0.08);border:1px solid rgba(107,138,253,0.15);border-radius:8px;padding:1px 6px;font-size:9px;color:#6b8afd;margin-left:4px;">${esc(a.name)}</span>`
+      ).join('');
+    } catch { return ''; }
+  }
+
   // Top posts table rows
   const topPostRows = data.top_posts.map(p => {
     const content = esc(truncate(p.content_short, 60));
     const link = p.post_url ? `<a href="${esc(p.post_url)}" target="_blank">${content}</a>` : content;
     const authorDisplay = esc(truncate(p.author_name, 30));
     const titleDisplay = p.author_title ? `<div style="font-size:11px;color:#666;margin-top:1px;">${esc(truncate(p.author_title, 40))}</div>` : '';
+    const scoreCol = data.has_scoring ? `<td style="text-align:center;">${scoreBadge(p.relevance_score, p.action_flag)}</td>` : '';
+    const areaPills = data.has_scoring ? focusAreaPills(p.focus_areas) : '';
     return `<tr>
       <td><strong>${authorDisplay}</strong>${titleDisplay}</td>
-      <td style="max-width:300px;">${link}</td>
+      <td style="max-width:300px;">${link}${areaPills}</td>
       <td style="white-space:nowrap;">👍 ${p.likes || 0} · 💬 ${p.comments || 0}</td>
+      ${scoreCol}
       <td>${esc(p.post_type)}</td>
     </tr>`;
   }).join('\n');
@@ -286,6 +397,13 @@ function generateHTML(data) {
   const ownBestContent = data.own_best_post
     ? `${esc(truncate(data.own_best_post.content_short, 50))} — ${(data.own_best_post.likes||0)+(data.own_best_post.comments||0)+(data.own_best_post.reposts||0)} total`
     : 'No posts yet';
+  let topRelevantContent = 'Run scorer to see relevance data';
+  if (data.top_relevant) {
+    const tr = data.top_relevant;
+    let areaName = '';
+    try { areaName = JSON.parse(tr.focus_areas)[0]?.name || ''; } catch {}
+    topRelevantContent = `<strong>${esc(truncate(tr.author_name, 20))}</strong> — Score ${tr.relevance_score}${areaName ? ` in ${esc(areaName)}` : ''}`;
+  }
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -366,13 +484,15 @@ function generateHTML(data) {
   <div class="st"><div class="v">${data.avg_engagement}</div><div class="l">Avg Engagement</div><div class="s">${data.total_engagement} total</div></div>
   <div class="st"><div class="v">${data.own_posts}</div><div class="l">Your Posts</div><div class="s">${data.own_avg_engagement} avg eng.</div></div>
   <div class="st"><div class="v">${data.topics.length}</div><div class="l">Topics</div><div class="s">${data.topics[0] ? data.topics[0].name : '-'}</div></div>
+  ${data.has_scoring ? `<div class="st"><div class="v" style="color:#4ade80;">${(data.action_flags.deep_read || 0) + (data.action_flags.reference || 0)}</div><div class="l">Relevant</div><div class="s">of ${data.scored_count} scored</div></div>` : ''}
   <div class="st"><div class="v">${data.batch_count}</div><div class="l">Batches</div><div class="s">~${data.profiles_per_night}/night</div></div>
 </div>
 
 <div class="insights">
   <div class="insight"><div class="il">Top Performing Post</div><div class="iv">${topEngagedContent}</div></div>
   <div class="insight green"><div class="il">Your Best Post</div><div class="iv">${ownBestContent}</div></div>
-  <div class="insight purple"><div class="il">Top Theme</div><div class="iv">${data.topics[0] ? `<strong>${data.topics[0].name}</strong> — ${data.topics[0].count} posts, ${data.topics[0].engagement} engagements` : 'Collecting data...'}</div></div>
+  ${data.has_scoring ? `<div class="insight purple"><div class="il">Most Relevant</div><div class="iv">${topRelevantContent}</div></div>` : ''}
+  <div class="insight${data.has_scoring ? '' : ' purple'}"><div class="il">Top Theme</div><div class="iv">${data.topics[0] ? `<strong>${data.topics[0].name}</strong> — ${data.topics[0].count} posts, ${data.topics[0].engagement} engagements` : 'Collecting data...'}</div></div>
 </div>
 
 <div class="tab-bar">
@@ -395,7 +515,7 @@ function generateHTML(data) {
       <div class="tbl">
         <h3>Top Network Posts by Engagement</h3>
         <table>
-          <thead><tr><th>Author</th><th>Content</th><th>Engagement</th><th>Type</th></tr></thead>
+          <thead><tr><th>Author</th><th>Content</th><th>Engagement</th>${data.has_scoring ? '<th style="text-align:center;">Score</th>' : ''}<th>Type</th></tr></thead>
           <tbody>${topPostRows || '<tr><td colspan="4" class="empty">No posts yet — run a collection first</td></tr>'}</tbody>
         </table>
       </div>
@@ -404,6 +524,42 @@ function generateHTML(data) {
 
   <!-- THEMES TAB -->
   <div class="tab-panel" id="panel-themes">
+    ${data.has_scoring && data.focus_area_distribution.length > 0 ? `
+    <div class="card full" style="margin-bottom:14px;">
+      <h3>Your Focus Areas (from scoring)</h3>
+      <div class="topics">
+        ${data.focus_area_distribution.map(a => {
+          const intensity = a.avgScore >= 3 ? 'rgba(74,222,128,0.15)' : a.avgScore >= 2 ? 'rgba(107,138,253,0.1)' : 'rgba(255,255,255,0.05)';
+          const textColor = a.avgScore >= 3 ? '#4ade80' : a.avgScore >= 2 ? '#6b8afd' : '#666';
+          return `<div class="topic" style="background:${intensity};border-color:${textColor}33;">
+            <span style="color:${textColor};">${esc(a.name)}</span>
+            <span class="tc">${a.count} posts</span>
+            <span class="te">avg ${a.avgScore}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    ${data.relevant_posts.length > 0 ? `
+    <div class="tbl" style="margin-bottom:14px;">
+      <h3>Relevant Posts (Score 3+)</h3>
+      <table>
+        <thead><tr><th>Author</th><th>Content</th><th style="text-align:center;">Score</th><th>Focus Area</th><th>Engagement</th></tr></thead>
+        <tbody>${data.relevant_posts.map(p => {
+          let primaryArea = '';
+          try { primaryArea = JSON.parse(p.focus_areas)[0]?.name || ''; } catch {}
+          const content = esc(truncate(p.content_short, 50));
+          const link = p.post_url ? `<a href="${esc(p.post_url)}" target="_blank">${content}</a>` : content;
+          return `<tr>
+            <td><strong>${esc(truncate(p.author_name, 25))}</strong></td>
+            <td style="max-width:280px;">${link}</td>
+            <td style="text-align:center;">${scoreBadge(p.relevance_score, p.action_flag)}</td>
+            <td><span style="color:#a78bfa;font-size:11px;">${esc(primaryArea)}</span></td>
+            <td style="white-space:nowrap;">👍 ${p.likes||0} · 💬 ${p.comments||0}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>` : ''}
+    ` : ''}
     <div class="row">
       <div class="card"><h3>Topic Distribution</h3><canvas id="topicChart"></canvas></div>
       <div class="card"><h3>Topic Engagement</h3><canvas id="topicEngChart"></canvas></div>

@@ -46,7 +46,11 @@ node src/profile-collector.js >> "$LOG" 2>&1
 echo "[$(date)] Own posts..." >> "$LOG"
 node src/own-posts.js >> "$LOG" 2>&1
 
-# Part 4: Refresh dashboard
+# Part 4: Score posts for relevance (requires focus-areas.json in data dir)
+echo "[$(date)] Scoring posts..." >> "$LOG"
+node src/score-posts.js >> "$LOG" 2>&1 || echo "[$(date)] Scoring skipped (no focus-areas.json)" >> "$LOG"
+
+# Part 5: Refresh dashboard
 echo "[$(date)] Refreshing dashboard..." >> "$LOG"
 node src/generate-dashboard.js >> "$LOG" 2>&1
 

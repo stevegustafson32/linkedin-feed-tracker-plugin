@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "updated_at": "2026-01-01T00:00:00Z",
+  "_comment": "Copy this file to your data directory as focus-areas.json and customize your focus areas.",
+  "focus_areas": [
+    {
+      "name": "Your Industry",
+      "keywords": ["keyword1", "keyword2", "industry term", "specific technology"]
+    },
+    {
+      "name": "Your Role / Function",
+      "keywords": ["role keyword", "function keyword", "skill keyword"]
+    },
+    {
+      "name": "Growth & Business",
+      "keywords": ["startup", "founder", "revenue", "fundraising", "growth", "product-market fit"]
+    },
+    {
+      "name": "AI & Technology",
+      "keywords": ["ai", "artificial intelligence", "automation", "machine learning", "llm"]
+    }
+  ]
+}
