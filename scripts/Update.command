@@ -135,12 +135,11 @@ echo "         ✓ Connections re-synced"
 echo ""
 echo "  [4/4] Refreshing your dashboard..."
 
-# Check if generate-dashboard.py or refresh-dashboard.js exists
-if [ -f "$INSTALL_DIR/../tools/generate-dashboard.py" ]; then
-  python3 "$INSTALL_DIR/../tools/generate-dashboard.py" 2>&1 | tail -3
+if [ -f "$INSTALL_DIR/src/generate-dashboard.js" ]; then
+  node "$INSTALL_DIR/src/generate-dashboard.js" 2>&1 | tail -3
   echo "         ✓ Dashboard refreshed"
-elif [ -f "$DATA_DIR/refresh-dashboard.js" ]; then
-  node "$DATA_DIR/refresh-dashboard.js" 2>&1 | tail -3
+elif [ -f "$INSTALL_DIR/../tools/generate-dashboard.py" ]; then
+  python3 "$INSTALL_DIR/../tools/generate-dashboard.py" 2>&1 | tail -3
   echo "         ✓ Dashboard refreshed"
 else
   echo "         ⏭  Dashboard will refresh on next Cowork session"
