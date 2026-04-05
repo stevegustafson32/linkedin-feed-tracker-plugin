@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cowork in Action: Six Workflows That Work</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface-2: #242424;
+    --surface-3: #2e2e2e;
+    --border: #333;
+    --text: #e8e8e8;
+    --text-muted: #999;
+    --text-dim: #8e8e8e;
+    --accent: #6ab88f;
+    --accent-light: #88cfaa;
+    --accent-dim: rgba(106,184,143,0.15);
+    --orange: #d4956a;
+    --blue: #7b8bd4;
+    --purple: #9b7ed8;
+    --green: #5cb85c;
+    --yellow: #f0c040;
+    --red: #e06666;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* RESOURCE NAV */
+  .resource-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    position: relative;
+    z-index: 998;
+  }
+  .resource-nav-brand {
+    font-weight: 700;
+    color: var(--text);
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  .resource-nav-links {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .resource-nav-links a {
+    padding: 6px 14px;
+    border-radius: 6px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .resource-nav-links a:hover {
+    color: var(--text);
+    background: var(--surface-2);
+  }
+  .resource-nav-links a.active {
+    color: var(--accent);
+    background: var(--accent-dim);
+    font-weight: 600;
+  }
+  @media (max-width: 640px) {
+    .resource-nav {
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .resource-nav-links {
+      gap: 4px;
+    }
+    .resource-nav-links a {
+      padding: 4px 10px;
+      font-size: 12px;
+    }
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    padding: 100px 40px 80px;
+    text-align: center;
+    background: linear-gradient(180deg, #101a14 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(106,184,143,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    letter-spacing: -1px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero p {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 640px;
+    margin: 0 auto 32px;
+  }
+  .hero-cta {
+    display: inline-block;
+    padding: 14px 32px;
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+  }
+  .hero-cta:hover { background: var(--accent-light); transform: translateY(-1px); }
+
+  /* LAYOUT */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* TABLE OF CONTENTS */
+  .toc {
+    padding: 60px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toc h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 24px;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .toc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .toc-item:hover { border-color: var(--accent); background: var(--surface-2); }
+  .toc-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* ACCORDION */
+  .accordion {
+    border-bottom: 1px solid var(--border);
+  }
+  .accordion:last-child { border-bottom: none; }
+
+  .accordion-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 28px 0;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: border-color 0.2s;
+    position: relative;
+  }
+  .accordion-header:hover {
+    border-left-color: var(--accent);
+  }
+  .accordion-header.open {
+    border-left-color: var(--accent);
+  }
+
+  .accordion-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .accordion-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+
+  .accordion-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+
+  .accordion-subtitle {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-bottom: 0;
+  }
+
+  .accordion-chevron {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+    margin-top: 4px;
+    position: relative;
+  }
+  .accordion-chevron::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    transform: rotate(-45deg);
+    transition: transform 0.3s ease;
+  }
+  .accordion-header.open .accordion-chevron::after {
+    transform: rotate(45deg);
+  }
+
+  .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0;
+  }
+  .accordion-content.open {
+    max-height: 10000px;
+  }
+
+  .accordion-body {
+    padding-bottom: 28px;
+  }
+
+  /* SECTIONS */
+  .section p {
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .section h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 32px 0 12px;
+  }
+
+  /* STEP CARDS */
+  .step-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .step-card.highlighted {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(106,184,143,0.05) 100%);
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 16px;
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+  .step-card h4 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .step-card p {
+    color: var(--text-muted);
+    font-size: 15px;
+  }
+
+  /* INFO BOXES */
+  .info-box {
+    padding: 20px 24px;
+    border-radius: 10px;
+    margin: 20px 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .info-box.tip {
+    background: rgba(92,184,92,0.08);
+    border-left: 3px solid var(--green);
+  }
+  .info-box.warning {
+    background: rgba(240,192,64,0.08);
+    border-left: 3px solid var(--yellow);
+  }
+  .info-box.key {
+    background: var(--accent-dim);
+    border-left: 3px solid var(--accent);
+  }
+  .info-box.levelup {
+    background: rgba(155,126,216,0.08);
+    border-left: 3px solid var(--purple);
+  }
+  .info-box strong { display: block; margin-bottom: 6px; }
+
+  /* CODE BLOCKS */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    overflow-x: auto;
+    margin: 16px 0;
+    white-space: pre;
+  }
+
+  /* QUOTE BLOCK */
+  .quote-block {
+    padding: 20px 24px;
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    margin: 24px 0;
+    font-style: italic;
+    color: var(--text-muted);
+  }
+  .quote-block .attribution {
+    font-style: normal;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* COMPARE TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+  .compare-table th {
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .compare-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .compare-table tr:hover td { background: var(--surface); }
+
+  /* STICKY NAV BAR */
+  .sticky-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 40px;
+    background: var(--bg);
+    background-color: rgba(15, 15, 15, 0.95);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    font-size: 13px;
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .sticky-nav.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .sticky-nav-left { color: var(--text-muted); font-weight: 500; }
+  .sticky-nav-right { color: var(--accent); font-weight: 600; }
+
+  /* BACK TO TOP BUTTON */
+  .back-to-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .back-to-top.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .back-to-top:hover { background: var(--accent-light); }
+
+  /* PROGRESS INDICATOR */
+  .accordion-progress {
+    position: absolute;
+    top: 28px;
+    right: 0;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    white-space: nowrap;
+  }
+  .accordion-header.open .accordion-progress {
+    opacity: 1;
+  }
+
+  /* FINAL CTA */
+  .final-cta {
+    text-align: center;
+    padding: 80px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .final-cta h2 { margin-bottom: 16px; }
+  .final-cta p { color: var(--text-muted); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
+
+  /* FOOTER */
+  .footer {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+
+  /* LINK STYLE */
+  a { color: var(--accent); }
+
+  /* SCROLL SMOOTH */
+  html { scroll-behavior: smooth; }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .hero { padding: 60px 20px 48px; }
+    .hero h1 { font-size: 28px; }
+    .toc-grid { grid-template-columns: 1fr; }
+    .accordion-header { padding: 20px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- STICKY NAV -->
+<div class="sticky-nav" id="stickyNav">
+  <div class="sticky-nav-left">Cowork Cookbook</div>
+  <div class="sticky-nav-right"><span id="stickyProgress">Workflow 1 of 6</span></div>
+</div>
+
+<!-- RESOURCE NAV -->
+<nav class="resource-nav">
+  <div class="resource-nav-brand">Steve's Resources</div>
+  <div class="resource-nav-links">
+    <a href="prompting.html">Prompting Guide</a>
+    <a href="index.html">Cowork Beginner</a>
+    <a href="level-2.html">Cowork Advanced</a>
+    <a href="workflows.html" class="active">Cowork in Action</a>
+    <a href="people.html">People I Learn From</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">LEVEL 3 — WORKFLOWS</div>
+  <h1>The Cowork <span>Cookbook</span></h1>
+  <p>Copy-paste prompts and complete setups from people who use Cowork every day. No theory — just what works.</p>
+  <button class="hero-cta" id="heroCtaBtn">Start with the first workflow ↓</button>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="container">
+
+  <div class="info-box warning" style="margin-bottom: 40px;">
+    <strong>Before You Start</strong>
+    These workflows assume you've completed the <a href="index.html">Cowork Beginner</a> setup — or at minimum: Claude Desktop installed, a workspace folder selected, and Gmail + Calendar connected. If you haven't done that yet, <a href="index.html">start there</a> and come back.
+  </div>
+
+  <div class="toc">
+    <h2>Six Workflows</h2>
+    <div class="toc-grid">
+      <a class="toc-item toc-link" data-accordion="1"><span class="toc-num">1</span> The 6 AM Dispatch</a>
+      <a class="toc-item toc-link" data-accordion="2"><span class="toc-num">2</span> The Essential Three</a>
+      <a class="toc-item toc-link" data-accordion="3"><span class="toc-num">3</span> Client Deliverable Factory</a>
+      <a class="toc-item toc-link" data-accordion="4"><span class="toc-num">4</span> Deep Research Engine</a>
+      <a class="toc-item toc-link" data-accordion="5"><span class="toc-num">5</span> CSV to Dashboard</a>
+      <a class="toc-item toc-link" data-accordion="6"><span class="toc-num">6</span> The AI Chief of Staff</a>
+    </div>
+  </div>
+
+  <!-- WORKFLOW 1: THE 6 AM DISPATCH -->
+  <div class="accordion" id="accordion1">
+    <button class="accordion-header open">
+      <div class="accordion-badge">1</div>
+      <div>
+        <div class="accordion-label">Workflow 1</div>
+        <div class="accordion-title">The 6 AM Dispatch</div>
+        <div class="accordion-subtitle">Queue 5 tasks from your phone before breakfast. Review finished work over coffee.</div>
+      </div>
+      <div class="accordion-chevron"></div>
+      <div class="accordion-progress">Workflow 1 of 6</div>
+    </button>
+    <div class="accordion-content open">
+      <div class="accordion-body">
+
+        <h3>Who This Is For</h3>
+        <p>CEO or founder managing multiple roles. You have 90 seconds before your day explodes. You need to queue work from anywhere, not just at your desk.</p>
+
+        <h3>The Setup</h3>
+        <div class="step-card">
+          <h4>Organized Workspace Folders</h4>
+          <p>Create: Active Work → Today's Work. This is where Claude queues tasks and outputs pile up. You review from this single folder.</p>
+        </div>
+        <div class="step-card">
+          <h4>Gmail + Calendar Connectors</h4>
+          <p>Connect your email and calendar. Claude can now read incoming messages and your day's schedule to prioritize intelligently.</p>
+        </div>
+        <div class="step-card">
+          <h4>Dispatch Connected on Phone</h4>
+          <p>Install Claude on your phone. You can message Claude from Dispatch at 6 AM and watch the queue build. Desktop handles execution while you shower.</p>
+        </div>
+
+        <h3>The Prompts</h3>
+
+        <div class="code-block">Go through my emails, prioritize the tasks for me that are most important, and organize them. Draft emails where you can to the ones that I should be responding to.</div>
+
+        <div class="code-block">Plan out content for Substack. Make a branded HTML with candidate ideas. This month I want to speak about [TOPIC]. Search the web, look for compelling stories I may want to cover, and organize that as a content calendar.</div>
+
+        <div class="code-block">Organize my Downloads folder. Segment [PROJECT] relevant files into that folder. Within the [PROJECT] folder, ensure you have relevant files categorized by customer and task.</div>
+
+        <h3>What Claude Produces</h3>
+        <p>Prioritized email drafts ready to send. A content calendar in HTML with story ideas, sourced and themed. Files organized by project and task type — all before you sit down at your desk.</p>
+
+        <div class="info-box key">
+          <strong>Why It Works</strong>
+          Dispatch lets you fire 5 tasks from your phone in 5 minutes while your Mac executes in parallel. You queue, walk away, review outputs over coffee. No waiting. No context switching.
+        </div>
+
+        <div class="info-box tip">
+          <strong>Make It Yours</strong>
+          Replace email triage with your biggest morning time sink. Swap 'Substack' for your platform. Change 'Downloads' to whatever folder collects clutter. The pattern works for any role that has repeatable morning work.
+        </div>
+
+        <div class="info-box levelup">
+          <strong>Level Up: Turn This Into a Skill</strong>
+          If you're running this dispatch every morning, stop copy-pasting the prompt. Tell Claude: <em>"Build me a skill called 'morning-dispatch' that runs my 5 morning tasks. Read my current dispatch prompt and convert it into a reusable skill with my email rules, content platform, and folder structure baked in."</em> Once it's a skill, one sentence triggers the whole thing — and it gets smarter as your MEMORY.md grows. <span style="font-size: 13px; color: var(--text-dim);">New to skills? See <a href="level-2.html">Cowork Advanced</a>, Section 1. Scheduled tasks? Section 6.</span>
+        </div>
+
+        <p style="margin-top: 24px; font-size: 13px; color: var(--text-dim);">Inspired by Christian Pean MD, Techy Surgeon</p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOW 2: THE ESSENTIAL THREE -->
+  <div class="accordion" id="accordion2">
+    <button class="accordion-header">
+      <div class="accordion-badge">2</div>
+      <div>
+        <div class="accordion-label">Workflow 2</div>
+        <div class="accordion-title">The Essential Three — Scheduled Tasks Starter</div>
+        <div class="accordion-subtitle">Three automated tasks that cover 80% of your daily overhead.</div>
+      </div>
+      <div class="accordion-chevron"></div>
+      <div class="accordion-progress">Workflow 2 of 6</div>
+    </button>
+    <div class="accordion-content">
+      <div class="accordion-body">
+
+        <h3>Who This Is For</h3>
+        <p>Anyone starting with automation. You don't need ten tasks. Start with three. Let them run for a week and feel the difference before you add anything else.</p>
+
+        <h3>The Setup</h3>
+        <div class="step-card">
+          <h4>Gmail + Calendar Connectors</h4>
+          <p>Connect your email and calendar so Claude can read them as part of each scheduled task.</p>
+        </div>
+        <div class="step-card">
+          <h4>Scheduled Tasks Enabled</h4>
+          <p>Make sure Cowork has permission to run scheduled tasks. This happens during setup, but verify in Settings if tasks don't fire.</p>
+        </div>
+
+        <h3>The Three Tasks</h3>
+
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h4>Morning Briefing (Daily 8 AM)</h4>
+          <div class="code-block">Summarize my unread emails by priority. Check today's calendar. Create a prioritized task list with talking points for each meeting. Output as an HTML file in my workspace.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h4>Meeting Prep (Daily, 30 min before first meeting)</h4>
+          <div class="code-block">Review the agenda and attendees for my next meeting. Pull any recent email threads with these people. Draft 3 talking points and 2 questions to ask.</div>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h4>Evening Debrief (Daily 6 PM)</h4>
+          <div class="code-block">Summarize what I accomplished today based on sent emails and calendar events. Flag anything that needs follow-up tomorrow. Keep it under one page.</div>
+        </div>
+
+        <h3>What Claude Produces</h3>
+        <p>A morning HTML briefing with your day's priorities. Pre-meeting prep with talking points and questions. End-of-day summary with follow-ups flagged and ready for tomorrow.</p>
+
+        <div class="info-box key">
+          <strong>Why It Works</strong>
+          Start small. Three tasks. One week. You'll feel the difference before you add anything else. These three cover: morning focus, meeting readiness, and end-of-day clarity. That's the foundation.
+        </div>
+
+        <div class="info-box warning">
+          <strong>Keep Your Mac Awake</strong>
+          Scheduled tasks only run while your Mac is on and Claude Desktop is open. If your Mac is asleep at the scheduled time, the task runs when you wake it.
+        </div>
+
+        <div class="info-box tip">
+          <strong>Make It Yours</strong>
+          Swap meeting prep for your recurring prep type. Change debrief time to your cadence. Cron examples: <code>0 9 * * 1-5</code> for weekdays at 9 AM, <code>30 8 * * 1</code> for Mondays at 8:30 AM.
+        </div>
+
+        <div class="info-box levelup">
+          <strong>Level Up: Wrap Your Tasks in a Skill</strong>
+          You've got the scheduled tasks running — now make them smarter. Tell Claude: <em>"Look at my 3 scheduled tasks. Build a skill called 'daily-ops' that combines the briefing, meeting prep, and debrief into one system. Include my email priority rules, meeting types, and output preferences so I don't have to re-specify them."</em> A skill gives your scheduled tasks a shared brain — consistent formatting, your preferences baked in, and better outputs over time.
+        </div>
+
+        <p style="margin-top: 24px; font-size: 13px; color: var(--text-dim);">Inspired by Christian Pean MD, Techy Surgeon</p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOW 3: CLIENT DELIVERABLE FACTORY -->
+  <div class="accordion" id="accordion3">
+    <button class="accordion-header">
+      <div class="accordion-badge">3</div>
+      <div>
+        <div class="accordion-label">Workflow 3</div>
+        <div class="accordion-title">Client Deliverable Factory</div>
+        <div class="accordion-subtitle">Turn raw briefs into polished reports every time.</div>
+      </div>
+      <div class="accordion-chevron"></div>
+      <div class="accordion-progress">Workflow 3 of 6</div>
+    </button>
+    <div class="accordion-content">
+      <div class="accordion-body">
+
+        <h3>Who This Is For</h3>
+        <p>Consultant, lawyer, agency professional. You produce the same type of deliverable repeatedly. You want consistent quality and fast turnaround.</p>
+
+        <h3>The Setup</h3>
+        <div class="step-card">
+          <h4>Project Folder with Template</h4>
+          <p>Add your report template (.docx). Include 2 strong past examples as reference. Add the client brief and any reference docs. Include project instructions: "Include executive summary. Never exceed 15 pages. Structure: summary → findings → recommendations → next steps → appendix. Output as .docx."</p>
+        </div>
+
+        <h3>The Prompt</h3>
+
+        <div class="code-block">The client just sent their brief — it's in the project folder. Read the brief, compare it to our template and past examples, then ask me 3-4 clarifying questions before you generate the full report as a Word doc.</div>
+
+        <h3>What Claude Produces</h3>
+        <p>A templated Word document with executive summary, findings, recommendations, next steps, and appendix. All formatted to your style, based on the template and examples you provided.</p>
+
+        <div class="info-box key">
+          <strong>Why It Works</strong>
+          Template + examples stay permanently loaded in the project. Scoped memory means Claude improves with each report. The third report is noticeably better than the first.
+        </div>
+
+        <div class="info-box tip">
+          <strong>Make It Yours</strong>
+          Swap template for proposals, SOWs, legal memos, case studies. Add letterhead .docx for auto branding. Key: give Claude 2-3 strong examples of what 'good' looks like for your domain.
+        </div>
+
+        <div class="info-box levelup">
+          <strong>Level Up: Build a Deliverable Skill</strong>
+          If you produce the same type of document more than twice, it should be a skill. Tell Claude: <em>"Build me a skill called 'client-report' that generates [DOCUMENT TYPE] from a brief. Read my template and the last 3 reports I produced. Bake in the structure, formatting rules, and quality checks. The skill should ask me clarifying questions before generating, just like a good junior analyst would."</em> Now one sentence — "run client-report for Acme" — produces a first draft that matches your standards.
+        </div>
+
+        <p style="margin-top: 24px; font-size: 13px; color: var(--text-dim);">Inspired by Ruben Hassid, How to AI</p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOW 4: DEEP RESEARCH ENGINE -->
+  <div class="accordion" id="accordion4">
+    <button class="accordion-header">
+      <div class="accordion-badge">4</div>
+      <div>
+        <div class="accordion-label">Workflow 4</div>
+        <div class="accordion-title">Deep Research Engine</div>
+        <div class="accordion-subtitle">Verified, citation-rich intelligence on any person, company, or market.</div>
+      </div>
+      <div class="accordion-chevron"></div>
+      <div class="accordion-progress">Workflow 4 of 6</div>
+    </button>
+    <div class="accordion-content">
+      <div class="accordion-body">
+
+        <h3>Who This Is For</h3>
+        <p>Founder prepping for investor meetings. Analyst sizing a market. Sales rep researching accounts. Anyone who needs research they can actually trust.</p>
+
+        <h3>What Makes This Different</h3>
+        <p>Most people ask Claude to 'research X' and get a generic summary with no sources. This approach uses a recursive research loop — the same methodology behind dedicated research skills that produce 15-30 page cited dossiers. The difference is structure: Claude decomposes the research into sub-questions, probes sources in priority order, tracks confidence on every claim, and separates evidence from inference.</p>
+
+        <h3>The Research Loop</h3>
+
+        <table class="compare-table">
+          <tr>
+            <th>Step</th>
+            <th>What Happens</th>
+          </tr>
+          <tr>
+            <td><strong>Probe</strong></td>
+            <td>Search sources in priority order: official site → social channels → reviews → press/third-party</td>
+          </tr>
+          <tr>
+            <td><strong>Decompose</strong></td>
+            <td>Break each section into 3-6 sub-questions. No claims without citations.</td>
+          </tr>
+          <tr>
+            <td><strong>Recurse</strong></td>
+            <td>For each sub-question, inspect sources, write a mini-brief with citations + confidence</td>
+          </tr>
+          <tr>
+            <td><strong>Synthesize</strong></td>
+            <td>Combine mini-briefs into the final section. Resolve conflicts between sources.</td>
+          </tr>
+        </table>
+
+        <h3>Evidence Rules</h3>
+
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h4>Every Claim Cited</h4>
+          <p>Inline citations with source, date accessed, and confidence (High / Medium / Unconfirmed). No naked claims.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h4>Three-Tier Separation</h4>
+          <p>Company-stated claims vs. third-party corroboration vs. inference. Each labeled explicitly.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h4>No Speculation</h4>
+          <p>If not publicly disclosed, write "No public disclosure found as of [date]" instead of guessing.</p>
+        </div>
+
+        <h3>The Prompts</h3>
+
+        <p style="margin-top: 20px; font-weight: 600; color: var(--accent);">Person Research:</p>
+        <div class="code-block">Research [PERSON NAME] at [COMPANY]. I'm meeting them for [PURPOSE]. Probe their LinkedIn, company site, talks, podcasts, and social media. Decompose into: career timeline, current role and priorities, communication style, personal interests, and fit with my ask. Cite every claim with source and confidence level. Separate evidence from inference. Output as a Word doc with an executive brief I can read in 5 minutes before the meeting.</div>
+
+        <p style="margin-top: 20px; font-weight: 600; color: var(--accent);">Company Research:</p>
+        <div class="code-block">Research [COMPANY] — [WEBSITE]. I'm evaluating them as [CONTEXT: competitor / partner / investment]. Probe their site first (product, pricing, about, blog, terms), then social, reviews, and press. Decompose into: business model, product offering, target customers, GTM motion, partner ecosystem, competitive landscape (8-12 players), and momentum in the last 24 months. Cite everything. No speculation on revenue or internal metrics. Output as a Word doc with executive summary.</div>
+
+        <p style="margin-top: 20px; font-weight: 600; color: var(--accent);">Industry/Market Research:</p>
+        <div class="code-block">Research the [INDUSTRY] market. Probe industry associations, research firms, company filings, government sources, and trade press. Decompose into: market sizing (TAM/SAM/SOM), value chain, competitive landscape, customer segments, technology trends, regulation, risks, and strategic opportunities. Present conflicting estimates as ranges. Cite every figure. Output as a Word doc with a 'So What' section at the end.</div>
+
+        <h3>What Claude Produces</h3>
+        <p>A 10-25 page Word document with inline citations, confidence scores, a source pack (12-25 annotated links), comparison tables, and an executive summary. The output quality depends on the prompt structure — the recursive loop and evidence rules are what separate this from a generic 'research X' request.</p>
+
+        <div class="info-box key">
+          <strong>Why It Works</strong>
+          The recursive loop forces depth. Decomposing into sub-questions prevents Claude from writing generic summaries. Source priority order ensures you're building from primary sources, not regurgitating blog posts. Confidence scoring tells you what to trust and what to verify yourself.
+        </div>
+
+        <div class="info-box tip">
+          <strong>Make It Yours</strong>
+          These prompts are starting points — customize the decomposition list for your domain. Add 'focus on [SPECIFIC ANGLE]' to narrow the research. Drop existing research into the project folder for Claude to build on. For recurring research (weekly competitive intel, regulatory monitoring), convert to a scheduled task. Install the person-research, company-research, or industry-research skills for the full automated version.
+        </div>
+
+        <div class="info-box levelup">
+          <strong>Level Up: Build Your Own Research Skill</strong>
+          The prompts above are the manual version. The real power is building a research skill that encodes YOUR methodology permanently. Tell Claude: <em>"Build me a research skill using this framework: probe sources in priority order (official site → social → reviews → press), decompose each topic into 3-6 sub-questions, recurse through each sub-question with citations and confidence scoring (High / Medium / Unconfirmed), then synthesize into a final report. Separate evidence from inference. Include a source pack with 15-25 annotated links. Output as a .docx with an executive brief on page one."</em> Once built, saying "research [person/company/market]" triggers a 15-30 page cited dossier — no prompt engineering required. For recurring intel (weekly competitor scans, regulatory monitoring), pair the skill with a scheduled task.
+        </div>
+
+        <p style="margin-top: 24px; font-size: 13px; color: var(--text-dim);">Research methodology by Steve Gustafson</p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOW 5: CSV TO DASHBOARD -->
+  <div class="accordion" id="accordion5">
+    <button class="accordion-header">
+      <div class="accordion-badge">5</div>
+      <div>
+        <div class="accordion-label">Workflow 5</div>
+        <div class="accordion-title">CSV to Dashboard</div>
+        <div class="accordion-subtitle">Turn any spreadsheet into an interactive dashboard without code.</div>
+      </div>
+      <div class="accordion-chevron"></div>
+      <div class="accordion-progress">Workflow 5 of 6</div>
+    </button>
+    <div class="accordion-content">
+      <div class="accordion-body">
+
+        <h3>Who This Is For</h3>
+        <p>Anyone with data who needs visuals fast. You have the data. You don't care about the technical implementation. You want a dashboard you can share.</p>
+
+        <h3>The Setup</h3>
+        <div class="step-card">
+          <h4>Drop CSV/Excel into Project Folder</h4>
+          <p>That's it. No plugins, no connectors, no special configuration. Just add your data file to the project folder.</p>
+        </div>
+
+        <h3>The Prompt</h3>
+
+        <div class="code-block">Read the data file in my project folder. Create an interactive HTML dashboard with: a summary metrics bar at the top, dropdown filters for [COLUMN1] and [COLUMN2], a trend chart showing [METRIC] over time, and a sortable data table below. Use a dark theme. Make it a single HTML file I can share with anyone.</div>
+
+        <h3>What Claude Produces</h3>
+        <p>A single-file HTML dashboard with Chart.js, dropdown filters, summary cards, responsive design. Fully interactive. Share via email or Slack. Works in any browser.</p>
+
+        <div class="info-box key">
+          <strong>Why It Works</strong>
+          One file, no dependencies, opens in any browser, shareable via email or Slack. Claude handles the Chart.js code, responsive layout, and filter logic. You get dashboards in minutes instead of hours.
+        </div>
+
+        <div class="info-box tip">
+          <strong>Make It Yours</strong>
+          Change column names and metrics to match your data. Add 'include a comparison to last month/quarter' for period-over-period. Request chart types: bar for categories, line for trends, scatter for correlations. Combine with a scheduled task for recurring dashboards that update weekly.
+        </div>
+
+        <div class="info-box levelup">
+          <strong>Level Up: Make This a Scheduled Task</strong>
+          If your data updates regularly (weekly exports, monthly reports), stop doing this manually. Tell Claude: <em>"Create a scheduled task that runs every Monday at 9 AM. It should read the latest CSV in my [PROJECT] folder, generate an updated dashboard with the same layout and filters as last time, and save it as an HTML file with this week's date. Compare to last week's numbers and flag anything that changed more than 10%."</em> Now your dashboard rebuilds itself — and you get anomaly alerts for free.
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKFLOW 6: THE AI CHIEF OF STAFF -->
+  <div class="accordion" id="accordion6">
+    <button class="accordion-header">
+      <div class="accordion-badge">6</div>
+      <div>
+        <div class="accordion-label">Workflow 6</div>
+        <div class="accordion-title">The AI Chief of Staff</div>
+        <div class="accordion-subtitle">The full system — from three tasks to a personalized operating layer.</div>
+      </div>
+      <div class="accordion-chevron"></div>
+      <div class="accordion-progress">Workflow 6 of 6</div>
+    </button>
+    <div class="accordion-content">
+      <div class="accordion-body">
+
+        <h3>Who This Is For</h3>
+        <p>Executive managing multiple domains. Anyone who wants the complete automated intelligence system. Start with three tasks. By week four, you have a personal operating system.</p>
+
+        <h3>The Pattern</h3>
+        <p>This isn't a single workflow — it's what happens when you combine the previous five into a system. Start with the Essential Three (Workflow 2). Add one domain-specific task per week. By week four, you have a personalized operating layer that handles your morning briefing, meeting prep, recurring research, deliverable production, and end-of-day wrap-up — without you re-explaining anything.</p>
+
+        <h3>The Graduated Rollout</h3>
+
+        <div class="step-card">
+          <div class="step-num">1</div>
+          <h4>Week 1: Deploy the Essential Three</h4>
+          <p>Morning briefing, meeting prep, evening debrief. Just these. Get comfortable with the rhythm. Notice what changes in your day.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">2</div>
+          <h4>Week 2: Add One Domain Task</h4>
+          <p>Pick from the menu below based on your role. One task only. Don't add more until you see the value from this one.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">3</div>
+          <h4>Week 3: Add a Second Domain Task</h4>
+          <p>By now you see which automations actually save time vs. create noise. Add the second one based on what worked.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-num">4</div>
+          <h4>Week 4+: Customize Based on What's Useful</h4>
+          <p>You now have a personalized operating system. Iterate weekly. Remove what doesn't work. Add what does.</p>
+        </div>
+
+        <h3>Domain Task Menu</h3>
+
+        <div class="step-card">
+          <h4>Deal Pipeline Pulse</h4>
+          <p>Scan emails for stale sales conversations. Flag deals going cold. Alert on inactivity over 2 weeks.</p>
+        </div>
+
+        <div class="step-card">
+          <h4>Weekly Competitive Intel</h4>
+          <p>Monitor 3-5 competitor sites for pricing, features, blog, and hiring changes. Deliver as a weekly summary.</p>
+        </div>
+
+        <div class="step-card">
+          <h4>Customer Success Threads</h4>
+          <p>Compile customer emails and tickets by priority. Flag escalations. Summarize by issue type.</p>
+        </div>
+
+        <div class="step-card">
+          <h4>Regulatory Monitoring</h4>
+          <p>Scan relevant government sources weekly for policy changes. Alert on changes that affect your business.</p>
+        </div>
+
+        <div class="step-card">
+          <h4>Invoice Cleanup</h4>
+          <p>Scan emails for invoices. Extract amounts, vendors, dates. Flag items over your threshold for review.</p>
+        </div>
+
+        <h3>The Setup Prompt</h3>
+
+        <div class="code-block">Interview me about my professional life. Ask me about my roles, priorities, VIP contacts, deal stages, recurring meetings, and communication preferences. Then generate a comprehensive context file and suggest 5 scheduled tasks based on what you learn.</div>
+
+        <h3>What Claude Produces</h3>
+        <p>A complete context file + recommended scheduled task library tailored to your actual work. Over time, scoped memory learns your patterns and the outputs get sharper. By week 8, Claude knows your priorities better than most people around you.</p>
+
+        <div class="quote-block">
+          "The question is not 'how do I do more?' but 'how do I offload the mechanical work so my limited attention goes to decisions that require judgment?'"
+          <div class="attribution">— Christian Pean MD, Techy Surgeon</div>
+        </div>
+
+        <div class="info-box key">
+          <strong>Why It Works</strong>
+          The graduated approach prevents overwhelm. Starting with 3 tasks instead of 10 means you actually stick with it. Adding weekly lets you evaluate what's useful vs. what creates "slop at scale." The interview prompt builds a context file that makes every future task better.
+        </div>
+
+        <div class="info-box warning">
+          <strong>The 'Slop at Scale' Warning</strong>
+          Every output requires human review. The value is in first-draft quality and organization — not blind automation. If you're spending more time editing outputs than you saved, that task isn't working. Remove it and try a different one.
+        </div>
+
+        <div class="info-box tip">
+          <strong>Make It Yours</strong>
+          The domain tasks above are examples — replace them with whatever recurring work eats your time. The interview prompt is the key unlock: it builds a context file tuned to YOUR work, not generic templates. Run the interview again every quarter as your priorities shift.
+        </div>
+
+        <div class="info-box levelup">
+          <strong>Level Up: Generate Your Entire Skill Library</strong>
+          The interview prompt above is your launchpad. After Claude builds your context file, take it one step further: <em>"Based on the context file you just built, generate 3-5 custom skills for my most repetitive workflows. Each skill should include my preferences, output format, and quality checks. Then suggest which ones should also be scheduled tasks with recommended timing."</em> This turns a one-time interview into a permanent operating system. Each skill runs on one sentence. Each scheduled task runs on autopilot. The context file ties them all together.
+        </div>
+
+        <p style="margin-top: 24px; font-size: 13px; color: var(--text-dim);">Inspired by Christian Pean MD, Techy Surgeon</p>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FINAL CTA -->
+  <div class="final-cta">
+    <h2>Pick One. Start Today.</h2>
+    <p>You don't need all six. Pick the workflow closest to your daily pain. Set it up. Run it for a week. Then come back for the next one.</p>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px;">
+      <a href="index.html" class="hero-cta" style="background: var(--orange); color: #000;">&larr; Cowork Beginner</a>
+      <a href="level-2.html" class="hero-cta" style="background: var(--blue); color: #fff;">Cowork Advanced &rarr;</a>
+    </div>
+    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+      <a href="prompting.html" class="hero-cta" style="background: transparent; border: 2px solid var(--accent); color: var(--accent);">Prompting Guide &rarr;</a>
+      <a href="people.html" class="hero-cta" style="background: transparent; border: 2px solid var(--purple); color: var(--purple);">People I Learn From &rarr;</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p>Created by Steve Gustafson &bull; March 2026</p>
+  <p style="margin-top: 8px;">Built with Claude Cowork (naturally). Have questions? <a href="mailto:stevegustafson@gmail.com">Reach out</a>.</p>
+  <p style="margin-top: 16px; color: var(--text-dim);">Claude and Cowork are products of <a href="https://anthropic.com" target="_blank">Anthropic</a>. This is an independent guide, not official Anthropic documentation.</p>
+</div>
+
+<script>
+  // Select all accordion headers and TOC links
+  const headers = document.querySelectorAll('.accordion-header');
+  const tocLinks = document.querySelectorAll('.toc-link');
+  const heroCtaBtn = document.getElementById('heroCtaBtn');
+  const stickyNav = document.getElementById('stickyNav');
+
+  function scrollToHeader(header) {
+    const headerRect = header.getBoundingClientRect();
+    const offset = 60; // Adjust for sticky nav height
+    const scrollTop = window.scrollY + headerRect.top - offset;
+    window.scrollTo({ top: scrollTop, behavior: 'smooth' });
+  }
+
+  // Update sticky nav progress
+  function updateStickyNav() {
+    const scrollTop = window.scrollY;
+    const heroHeight = document.querySelector('.hero').offsetHeight;
+
+    // Show sticky nav after hero
+    if (scrollTop > heroHeight - 100) {
+      stickyNav.classList.add('visible');
+
+      // Update progress based on which accordion is open
+      let currentWorkflow = 1;
+      headers.forEach((header, index) => {
+        if (header.classList.contains('open')) {
+          currentWorkflow = index + 1;
+        }
+      });
+      document.getElementById('stickyProgress').textContent = `Workflow ${currentWorkflow} of 6`;
+    } else {
+      stickyNav.classList.remove('visible');
+    }
+
+    // Show/hide back-to-top button
+    const backToTopBtn = document.getElementById('backToTopBtn');
+    if (scrollTop > 300) {
+      backToTopBtn.classList.add('visible');
+    } else {
+      backToTopBtn.classList.remove('visible');
+    }
+  }
+
+  // FIX 1: Hero CTA button - open accordion1 and scroll to it
+  if (heroCtaBtn) {
+    heroCtaBtn.addEventListener('click', function() {
+      const accordion = document.getElementById('accordion1');
+      if (accordion) {
+        const header = accordion.querySelector('.accordion-header');
+        const content = accordion.querySelector('.accordion-content');
+
+        // Close all other accordions
+        headers.forEach(h => {
+          h.classList.remove('open');
+          h.closest('.accordion').querySelector('.accordion-content').classList.remove('open');
+        });
+
+        // Open accordion1
+        header.classList.add('open');
+        content.classList.add('open');
+
+        // Scroll header to top of viewport
+        scrollToHeader(header);
+        updateStickyNav();
+      }
+    });
+  }
+
+  // FIX 2: Create and add back-to-top button
+  const backToTopContainer = document.createElement('button');
+  backToTopContainer.id = 'backToTopBtn';
+  backToTopContainer.className = 'back-to-top';
+  backToTopContainer.innerHTML = '↑';
+  document.body.appendChild(backToTopContainer);
+
+  backToTopContainer.addEventListener('click', function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Toggle accordion on header click
+  headers.forEach((header, index) => {
+    header.addEventListener('click', function() {
+      const accordion = this.closest('.accordion');
+      const content = accordion.querySelector('.accordion-content');
+      const isOpen = this.classList.contains('open');
+
+      // Close all other accordions
+      headers.forEach((h, i) => {
+        if (i !== index) {
+          h.classList.remove('open');
+          h.closest('.accordion').querySelector('.accordion-content').classList.remove('open');
+        }
+      });
+
+      // Toggle current accordion
+      this.classList.toggle('open');
+      content.classList.toggle('open');
+
+      // Update sticky nav when accordion changes
+      updateStickyNav();
+
+      // Scroll to top of this section when opening
+      if (!isOpen) {
+        scrollToHeader(this);
+      }
+    });
+  });
+
+  // TOC link click functionality
+  tocLinks.forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const accordionId = this.getAttribute('data-accordion');
+      const accordion = document.getElementById('accordion' + accordionId);
+
+      if (accordion) {
+        const header = accordion.querySelector('.accordion-header');
+        const content = accordion.querySelector('.accordion-content');
+
+        // Close all other accordions
+        headers.forEach(h => {
+          h.classList.remove('open');
+          h.closest('.accordion').querySelector('.accordion-content').classList.remove('open');
+        });
+
+        // Open target accordion
+        header.classList.add('open');
+        content.classList.add('open');
+
+        // Update sticky nav when accordion changes
+        updateStickyNav();
+
+        // Scroll header to top of viewport
+        scrollToHeader(header);
+      }
+    });
+  });
+
+  // Initialize on page load
+  window.addEventListener('load', updateStickyNav);
+  window.addEventListener('scroll', updateStickyNav);
+</script>
+
+</body>
+</html>
